@@ -73,4 +73,7 @@ confirm them against our system.
 | Material code | `Material` equals RMI's `ProductCode` (e.g. `TIGVMPL1200X600NOGL02140`) |
 | Dealer match rate | % of RMI dealers found in SAP invoices |
 | Design match rate | % of displayed designs with an SAP material (target: the 84% RMI matches automatically, plus SAP names for the rest) |
-| Cross-check | Our Aug-2026 totals vs. RMI's own Display Tracker Report (Jul-26 volume 2,385.720 / value ₹9,78,569.90) |
+| Month total | One month's total value for the chosen sales org / division equals the sales register finance already trusts (or SAP's billing list, VF05N) |
+| Invoice spot-check | 5–10 known invoices for RMI dealers (from the dealers or the sales team) appear with the same dealer, design, quantity and value |
+
+Note: RMI's own Display Tracker Report sales figures are **not** used for validation (known issues, per business owner).

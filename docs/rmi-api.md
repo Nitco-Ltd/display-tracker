@@ -74,8 +74,9 @@ expands to one row per design. Per-row calls (12k) — avoid; only needed if we 
 
 ## Sync plan — DECIDED 2026-11-24: display data from RMI, **sales from SAP directly**
 
-RMI's `DisplayTrackerReport` (which embeds SVIK's own SAP join) is NOT used for sales; it stays only as a
-cross-check tool.
+RMI's `DisplayTrackerReport` (which embeds SVIK's own SAP join) is NOT used for sales — not even as a
+cross-check: the business owner reports known issues in RMI's sales figures. Only its column layout is used,
+as the template for our report.
 
 1. `GetDisplayTrackerList` (1 call, ~1 s) → every record ID + status; detects new / removed records.
 2. `ExcelDisplayTracker` (1 call, ~4 s) → all 21 display columns for all rows. Needed because the list has
