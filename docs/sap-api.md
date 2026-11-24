@@ -133,3 +133,16 @@ YCA06 sold-to = ship-to on every line. Our extra lines are ₹0 sub-items and ty
 | Types our rules ignore: ZDMS ₹6,42,507, ZTDN ₹3,50,050, ZNTI ₹38,286 | +₹10,30,843 |
 | Cancellations: YCA06 lists each original and each cancellation on its own date (S1 −₹16,38,716, S2 +₹2,88,149; later-cancelled ZVDT +₹17,26,776, ZRTI −₹2,95,834, ZCBR −₹5,40,992). We drop cancelled documents and their cancellations entirely, so a cancelled document never moves a month's figure. | −₹4,60,617 |
 | **Total** | **₹5,70,226** |
+
+## 9. Reconciliation with the "Sales data" MIS file (tiles, Apr–Oct 2026)
+
+File provided by the business owner: 41,088 invoice lines, division 02 (tiles), sales orgs 1801 + 1802
+(207 June lines have a blank sales org; SAP shows them as 1801).
+
+**Line level (1801):** all 37,237 invoice × material lines exist in our data with the same customer, invoice type
+and net value. m² is identical except on credit/debit notes (ZCBR, ZCPD, ZTDN, S2), where the file shows 0 m² —
+the same as our value-only rule.
+
+**Monthly totals (1801):** file ₹227.85 Cr vs ours ₹227.29 Cr, difference ₹56.15 L (0.25%), every month fully
+explained by (A) invoice types our rules ignore — ZDMS, ZTDN, ZNTI, one ZMAR line — ₹52.46 L, and (B) cancellations,
+which the file books on each document's own date while we drop cancelled documents — ₹3.69 L.
