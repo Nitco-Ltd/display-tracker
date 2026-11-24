@@ -98,7 +98,9 @@ export class RmiClient {
     const res = await request(this.base + "Login", {
       label: "RMI Login",
       method: "POST",
-      headers: { ...this.appHeaders(), CustomerId: c.RMI_CUSTOMER_ID, "Content-Type": "application/json" },
+      // Note: header names are case-insensitive; sending both CustomerID and CustomerId merges them into
+      // "NitcoRMI, NitcoRMI" and RMI answers 403 "Unauthorized Company." So appHeaders() only, once.
+      headers: { ...this.appHeaders(), "Content-Type": "application/json" },
       body: JSON.stringify({ UserName: c.RMI_USER, Password: c.RMI_PASS, platform: 1, latitude: "", longitude: "" }),
     });
     const body: unknown = await res.json();
