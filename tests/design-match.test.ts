@@ -43,3 +43,28 @@ describe("design → material matching", () => {
     expect(similarity("abc", "abc")).toBe(1);
   });
 });
+
+describe("SAP description tier", () => {
+  const sap: Candidate[] = [
+    { code: "TIGVXXX600X600AA00001", name: "Tropicana Rose", sizeKey: "600x600", source: "sap" },
+    { code: "TIGVXXX600X600AA00002", name: "Tropicana Rose", sizeKey: "300x600", source: "sap" },
+    { code: "TIGVXXX600X600AA00003", name: "Twin Name", sizeKey: "600x600", source: "sap" },
+    { code: "TIGVXXX600X600AA00004", name: "Twin Name", sizeKey: "600x600", source: "sap" },
+  ];
+  const sapByName = new Map<string, Candidate[]>();
+  for (const c of sap) sapByName.set(designKey(c.name), [...(sapByName.get(designKey(c.name)) ?? []), c]);
+
+  it("uses SAP only when RMI's catalogue has no match, and only with name + size", () => {
+    expect(matchDesign("tropicana rose", "600x600", catalog, byName, sapByName)).toMatchObject({
+      method: "sap_name_and_size",
+      status: "auto",
+      materialCode: "TIGVXXX600X600AA00001",
+    });
+  });
+  it("RMI's catalogue wins over SAP", () => {
+    expect(matchDesign("aeon armani g", "600x1200", catalog, byName, sapByName).method).toBe("exact_name");
+  });
+  it("two SAP codes with the same name and size -> needs review", () => {
+    expect(matchDesign("twin name", "600x600", catalog, byName, sapByName)).toMatchObject({ method: "ambiguous", status: "needs_review" });
+  });
+});

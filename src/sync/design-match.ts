@@ -4,8 +4,9 @@
 //   1. exact_name     Same normalized name as exactly one product code             -> status "auto"   (used)
 //   2. name_and_size  Same name, several codes, exactly one with the display's size -> status "auto"   (used)
 //   3. ambiguous      Same name, several codes, size doesn't decide                -> "needs_review" (NOT used)
-//   4. fuzzy          Similar name (Dice ≥ 0.75), best candidate proposed          -> "needs_review" (NOT used)
-//   5. none           Nothing similar                                               -> "unmapped"
+//   4. sap_name_and_size  Not in RMI's catalogue; SAP tile description + size -> one code -> "auto" (used)
+//   5. fuzzy          Similar name (Dice ≥ 0.75), best candidate proposed          -> "needs_review" (NOT used)
+//   6. none           Nothing similar                                               -> "unmapped"
 // Rows with "approved", "manual" or "rejected" status were set by a person and are never overwritten.
 // Sales are attached only for "auto", "approved" and "manual". We never silently guess.
 import { eq } from "drizzle-orm";
@@ -58,13 +59,20 @@ export function similarity(a: string, b: string): number {
 export interface MatchResult {
   materialCode: string | null;
   materialName: string | null;
-  method: "exact_name" | "name_and_size" | "ambiguous" | "fuzzy" | "none";
+  method: "exact_name" | "name_and_size" | "sap_name_and_size" | "ambiguous" | "fuzzy" | "none";
   confidence: number;
   status: "auto" | "needs_review" | "unmapped";
   candidates: Candidate[];
 }
 
-export function matchDesign(dKey: string, sizeKey: string, catalog: Candidate[], byName: Map<string, Candidate[]>): MatchResult {
+export function matchDesign(
+  dKey: string,
+  sizeKey: string,
+  catalog: Candidate[],
+  byName: Map<string, Candidate[]>,
+  sapByName?: Map<string, Candidate[]>,
+): MatchResult {
+  // Tier 1: RMI's own product catalogue (what RMIs pick designs from).
   const exact = byName.get(dKey) ?? [];
   const codes = [...new Map(exact.map((c) => [c.code, c])).values()];
   if (codes.length === 1) {
@@ -77,7 +85,19 @@ export function matchDesign(dKey: string, sizeKey: string, catalog: Candidate[],
     }
     return { materialCode: null, materialName: null, method: "ambiguous", confidence: 0, status: "needs_review", candidates: (sized.length ? sized : codes).slice(0, 5) };
   }
-  // Fuzzy: best similar names; prefer same size.
+  // Tier 2: SAP material descriptions (older / discontinued designs not in RMI's catalogue).
+  // SAP often has several codes per name, so we require name AND size to point at exactly one code.
+  if (sapByName) {
+    const sapCodes = [...new Map((sapByName.get(dKey) ?? []).map((c) => [c.code, c])).values()];
+    const sized = sapCodes.filter((c) => c.sizeKey && c.sizeKey === sizeKey);
+    if (sized.length === 1) {
+      return { materialCode: sized[0].code, materialName: sized[0].name, method: "sap_name_and_size", confidence: 0.9, status: "auto", candidates: [] };
+    }
+    if (sapCodes.length) {
+      return { materialCode: null, materialName: null, method: "ambiguous", confidence: 0, status: "needs_review", candidates: (sized.length ? sized : sapCodes).slice(0, 5) };
+    }
+  }
+  // Fuzzy: best similar names; prefer same size. Always needs review.
   const scored = catalog
     .map((c) => ({ c, s: similarity(dKey, designKey(c.name)) + (sizeKey && c.sizeKey === sizeKey ? 0.05 : 0) }))
     .filter((x) => x.s >= 0.75)
@@ -103,18 +123,24 @@ export async function rebuildDesignMap(): Promise<Record<string, number>> {
 
   const products = await db.select().from(t.rmiProduct);
   const materials = await db.select().from(t.sapMaterial);
-  const catalog: Candidate[] = [
-    ...products.map((p) => ({ code: p.productCode, name: p.productName, sizeKey: normalizeTileSize(p.size) || sizeFromCode(p.productCode), source: "rmi" as const })),
-    ...materials
-      .filter((m) => m.description && !products.some((p) => p.productCode === m.material))
-      .map((m) => ({ code: m.material, name: m.description!, sizeKey: sizeFromCode(m.material), source: "sap" as const })),
-  ];
-  const byName = new Map<string, Candidate[]>();
-  for (const c of catalog) {
-    const k = designKey(c.name);
-    if (!byName.has(k)) byName.set(k, []);
-    byName.get(k)!.push(c);
-  }
+  const rmiCodes = new Set(products.map((p) => p.productCode));
+  const rmiCat: Candidate[] = products.map((p) => ({ code: p.productCode, name: p.productName, sizeKey: normalizeTileSize(p.size) || sizeFromCode(p.productCode), source: "rmi" as const }));
+  // SAP: tile materials only (NITCO tile codes start with "TI"), not already in RMI's catalogue.
+  const sapCat: Candidate[] = materials
+    .filter((m) => m.description && m.material.startsWith("TI") && !rmiCodes.has(m.material))
+    .map((m) => ({ code: m.material, name: m.description!, sizeKey: sizeFromCode(m.material), source: "sap" as const }));
+  const catalog = [...rmiCat, ...sapCat];
+  const index = (list: Candidate[]) => {
+    const m = new Map<string, Candidate[]>();
+    for (const c of list) {
+      const k = designKey(c.name);
+      if (!m.has(k)) m.set(k, []);
+      m.get(k)!.push(c);
+    }
+    return m;
+  };
+  const byName = index(rmiCat);
+  const sapByName = index(sapCat);
 
   const rows = await db
     .select({
@@ -146,7 +172,7 @@ export async function rebuildDesignMap(): Promise<Record<string, number>> {
       upserts.push({ ...prev, rowCount: g.refs.length, updatedAt: prev.updatedAt });
       continue;
     }
-    const m = matchDesign(g.dKey, g.sKey, catalog, byName);
+    const m = matchDesign(g.dKey, g.sKey, catalog, byName, sapByName);
     decided.set(k, { code: m.materialCode, status: m.status });
     upserts.push({
       designKey: g.dKey,
