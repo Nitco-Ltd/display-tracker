@@ -106,3 +106,13 @@ Cancelled invoices (`BillingDocumentIsCancelled`) are always excluded. Month = b
 
 **Design variants (decided 2026-11-24):** a display counts sales of its **own linked SAP material code only**.
 Variant codes of the same design (e.g. "TROPICANA (PO)", "(HW)", "(RPO)") are not added.
+
+## 7. Independent check against SAP's own analytics (2026-11-24)
+
+SAP's standard query **`C_REVENUEFROMINVOICEQRY`** ("Sales Volume Flexible Analysis", service
+`C_REVENUEFROMINVOICEQRY_CDS`, readable by user 100661) was compared with our stored invoice lines for sales org
+1801, Aug–Oct 2026, per month and invoice type. SAP's *Net Sales Volume* (cancellations removed, credit notes
+negative) equals our not-cancelled totals **to the rupee for all 15 month × type pairs** (ZVDT, ZRTI, ZCBR, ZCPD,
+ZCQC). This check is fully independent of RMI.
+
+Not yet compared: NITCO's custom transaction **YCA06** (not published as an OData service; needs an export).
