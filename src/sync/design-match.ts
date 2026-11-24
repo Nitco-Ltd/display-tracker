@@ -21,6 +21,7 @@ export interface Candidate {
   code: string;
   name: string;
   sizeKey: string;
+  labelSizeKey?: string; // RMI catalogue's own size label, when it differs from the code's size
   source: "rmi" | "sap";
 }
 
@@ -79,7 +80,9 @@ export function matchDesign(
   const codes = [...new Map(exact.map((c) => [c.code, c])).values()];
   // A unique name whose size contradicts the display's size is NOT trusted (e.g. RMI "Vintage Pearl 600X600"
   // vs the only catalogue product, 800x800): look for the right size in SAP, otherwise ask a person.
-  const sizeConflict = codes.length === 1 && !!sizeKey && !!codes[0].sizeKey && codes[0].sizeKey !== sizeKey;
+  // (A display entered with RMI's own label for that product, even a wrong label, is not a conflict.)
+  const sizeConflict =
+    codes.length === 1 && !!sizeKey && !!codes[0].sizeKey && codes[0].sizeKey !== sizeKey && codes[0].labelSizeKey !== sizeKey;
   if (sizeConflict && sapByName) {
     const sapSized = [...new Map((sapByName.get(dKey) ?? []).map((c) => [c.code, c])).values()].filter((c) => c.sizeKey === sizeKey);
     if (sapSized.length === 1) {
@@ -138,7 +141,7 @@ export async function rebuildDesignMap(): Promise<Record<string, number>> {
   const products = await db.select().from(t.rmiProduct);
   const materials = await db.select().from(t.sapMaterial);
   const rmiCodes = new Set(products.map((p) => p.productCode));
-  const rmiCat: Candidate[] = products.map((p) => ({ code: p.productCode, name: p.productName, sizeKey: normalizeTileSize(p.size) || sizeFromCode(p.productCode), source: "rmi" as const }));
+  const rmiCat: Candidate[] = products.map((p) => ({ code: p.productCode, name: p.productName, sizeKey: sizeFromCode(p.productCode) || normalizeTileSize(p.size) /* the size inside the SAP code beats RMI's catalogue label (which has errors, e.g. 200X1000 for a 1200x200 plank) */, labelSizeKey: normalizeTileSize(p.size), source: "rmi" as const }));
   // SAP: tile materials only (NITCO tile codes start with "TI"), not already in RMI's catalogue.
   const sapCat: Candidate[] = materials
     .filter((m) => m.description && m.material.startsWith("TI") && !rmiCodes.has(m.material))

@@ -71,6 +71,13 @@ describe("SAP description tier", () => {
     sap2.set("aeon armani g", [{ code: "TIGVAAA600X600GL0001", name: "Aeon Armani - G", sizeKey: "600x600", source: "sap" }]);
     expect(matchDesign("aeon armani g", "600x600", catalog, byName, sap2)).toMatchObject({ method: "sap_name_and_size", materialCode: "TIGVAAA600X600GL0001" });
   });
+  it("a display using RMI's own (wrong) size label for the product is not a size conflict", () => {
+    const plank: Candidate = { code: "TIGVWPP1200X200NOMA04004", name: "Red Oak", sizeKey: "200x1200", labelSizeKey: "200x1000", source: "rmi" };
+    const by = new Map([["red oak", [plank]]]);
+    expect(matchDesign("red oak", "200x1200", [plank], by, new Map()).status).toBe("auto"); // real size
+    expect(matchDesign("red oak", "200x1000", [plank], by, new Map()).status).toBe("auto"); // RMI's label
+    expect(matchDesign("red oak", "600x600", [plank], by, new Map()).method).toBe("size_mismatch");
+  });
   it("two SAP codes with the same name and size -> needs review", () => {
     expect(matchDesign("twin name", "600x600", catalog, byName, sapByName)).toMatchObject({ method: "ambiguous", status: "needs_review" });
   });
