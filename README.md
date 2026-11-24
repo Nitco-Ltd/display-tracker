@@ -162,7 +162,7 @@ Run these in Command Prompt in the project folder.
 
 **Only months that have started are shown** (decided 24 Nov 2026). A report gains one month column each month until its window is complete, e.g. the Sep-2026 report built in Nov-2026 has Aug-26, Sep-26, Oct-26 and Nov-26; from Sep-2027 on it has all 14 months (columns V–AW, the same layout as RMI's report). The daily job rebuilds the reports, so new months appear automatically.
 
-**Average (report).** Avg Sales Volume / Value = **sum of the 14 months ÷ 14**, with months that haven't happened yet counted as 0 (same as RMI's original report). So for a report that isn't complete yet, it is the sum of the months shown ÷ 14. The dashboard also shows an average over elapsed months only.
+**Average (report).** Avg Sales Volume / Value = **sum of the 14 months ÷ 14**, with months that haven't happened yet counted as 0 (same as RMI's original report). So for a report that isn't complete yet, it is the sum of the months shown ÷ 14 (confirmed 24 Nov 2026: always ÷ 14, never ÷ months shown, so averages stay comparable with RMI's reports). The dashboard also shows an average over elapsed months only.
 
 **Sales (from SAP, sales org 1801, domestic).**
 
