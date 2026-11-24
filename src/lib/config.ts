@@ -32,7 +32,8 @@ const schema = z.object({
   SAP_SALES_ORGS: z.string().default(""), // comma list; blank = all
   // Billing document types. PENDING CONFIRMATION by the SAP team (docs/sap-api.md §4.6).
   SAP_SALES_DOC_TYPES: z.string().default("F2"),
-  SAP_RETURN_DOC_TYPES: z.string().default("RE,G2"),
+  SAP_RETURN_DOC_TYPES: z.string().default("RE,G2"), // quantity and value come back (returns)
+  SAP_VALUE_ONLY_DOC_TYPES: z.string().default(""), // credit notes that reduce value only (rate difference, claims)
   SAP_FIRST_BILLING_DATE: z.string().default("2025-03-01"),
   SAP_RECHECK_MONTHS: z.coerce.number().int().min(0).max(12).default(3),
   SAP_VOLUME_UNIT: z.string().default("M2"),

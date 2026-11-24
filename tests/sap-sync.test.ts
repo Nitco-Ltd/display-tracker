@@ -6,6 +6,7 @@ process.env.SAP_USER = "reader";
 process.env.SAP_PASS = "secret";
 process.env.SAP_SALES_DOC_TYPES = "F2";
 process.env.SAP_RETURN_DOC_TYPES = "RE";
+process.env.SAP_VALUE_ONLY_DOC_TYPES = "ZCPD";
 
 const d = (iso: string) => `/Date(${Date.parse(iso)})/`;
 const doc = (no: string, type: string, date: string, soldTo: string, items: object[], cancelled = false) => ({
@@ -40,6 +41,7 @@ const billing = [
   doc("9000003", "RE", "2026-09-20", "0011000111", [item("10", MAT, 10, 5000)]), // return
   doc("9000004", "F2", "2026-09-21", "0011000111", [item("10", MAT, 999, 999999)], true), // cancelled
   doc("9000005", "S1", "2026-09-22", "0011000111", [item("10", MAT, 999, 999999)]), // cancellation doc
+  doc("9000006", "ZCPD", "2026-09-25", "0011000111", [item("10", MAT, 50, 1000)]), // rate-difference credit: value only
 ];
 const products = [
   {
@@ -78,8 +80,9 @@ describe("SAP sync (fixture)", () => {
     const byMonth = Object.fromEntries(rows.map((x) => [x.month, x]));
     expect(Object.keys(byMonth).sort()).toEqual(["2026-08", "2026-09"]);
     expect(byMonth["2026-08"]).toMatchObject({ dealerCode: "0011000111", materialCode: MAT, volume: 144, value: 50000 });
-    // Sep: 50 boxes sale − 10 boxes return = 40 boxes = 57.6 m²; cancelled + S1 ignored
-    expect(byMonth["2026-09"]).toMatchObject({ volume: 57.6, value: 20000, lineCount: 2 });
+    // Sep: 50 boxes sale − 10 boxes return = 40 boxes = 57.6 m²; ₹1,000 rate credit reduces value only;
+    // cancelled invoice + S1 cancellation ignored
+    expect(byMonth["2026-09"]).toMatchObject({ volume: 57.6, value: 19000, lineCount: 3 });
   });
 
   it("joins sales onto a display row over the 14-month window", async () => {
@@ -101,8 +104,8 @@ describe("SAP sync (fixture)", () => {
     expect(row.sales.map((s) => s.month)).toEqual(windowMonths("2026-08"));
     expect(row.sales).toHaveLength(14);
     expect(row.sales[1]).toMatchObject({ month: "2026-08", volume: 144, value: 50000 });
-    expect(row.sales[2]).toMatchObject({ month: "2026-09", volume: 57.6, value: 20000 });
-    expect(row.avgValue).toBeCloseTo(70000 / 14, 3);
+    expect(row.sales[2]).toMatchObject({ month: "2026-09", volume: 57.6, value: 19000 });
+    expect(row.avgValue).toBeCloseTo(69000 / 14, 3);
   });
 
   it("only ever sends GET requests to SAP", () => {

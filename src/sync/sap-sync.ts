@@ -7,6 +7,7 @@
 // Sales rule (PENDING business confirmation, see docs/sap-api.md §4):
 //   - document type in SAP_SALES_DOC_TYPES  -> +quantity, +value
 //   - document type in SAP_RETURN_DOC_TYPES -> −quantity, −value
+//   - document type in SAP_VALUE_ONLY_DOC_TYPES -> −value only (rate-difference / claim credit notes)
 //   - cancelled documents and every other type (cancellations S1/S2, pro forma, …) -> ignored
 //   - month = billing date; value = NetAmount (net of tax); volume converted to SAP_VOLUME_UNIT (m²)
 import { config, csv } from "@/lib/config";
@@ -88,6 +89,7 @@ export async function rebuildMonthlySales(): Promise<{ rows: number; noVolume: n
   const t = tables();
   const sales = new Set(csv(config().SAP_SALES_DOC_TYPES));
   const returns = new Set(csv(config().SAP_RETURN_DOC_TYPES));
+  const valueOnly = new Set(csv(config().SAP_VALUE_ONLY_DOC_TYPES));
   const volUnit = config().SAP_VOLUME_UNIT.toUpperCase();
   const conv = new Map((await db.select().from(t.sapMaterial)).map((m) => [m.material, m.volumePerBaseUnit]));
 
@@ -95,10 +97,12 @@ export async function rebuildMonthlySales(): Promise<{ rows: number; noVolume: n
   let noVolume = 0;
   for (const l of await db.select().from(t.sapBillingItem)) {
     if (l.isCancelled || !l.soldTo || !l.material || !l.billingDate || !l.docType) continue;
-    const sign = sales.has(l.docType) ? 1 : returns.has(l.docType) ? -1 : 0;
+    const isValueOnly = valueOnly.has(l.docType);
+    const sign = sales.has(l.docType) ? 1 : returns.has(l.docType) || isValueOnly ? -1 : 0;
     if (!sign) continue;
     let vol: number | null = null;
-    if (l.quantityUnit?.toUpperCase() === volUnit) vol = l.quantity;
+    if (isValueOnly) vol = 0;
+    else if (l.quantityUnit?.toUpperCase() === volUnit) vol = l.quantity;
     else if (l.quantityBase !== null && conv.get(l.material)) vol = l.quantityBase * conv.get(l.material)!;
     if (vol === null) noVolume++;
     const key = `${l.soldTo}|${l.material}|${l.billingDate.slice(0, 7)}`;
