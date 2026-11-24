@@ -64,6 +64,13 @@ describe("SAP description tier", () => {
   it("RMI's catalogue wins over SAP", () => {
     expect(matchDesign("aeon armani g", "600x1200", catalog, byName, sapByName).method).toBe("exact_name");
   });
+  it("unique name but different size -> needs review (or the right size from SAP)", () => {
+    const m = matchDesign("aeon armani g", "600x600", catalog, byName, sapByName);
+    expect(m).toMatchObject({ method: "size_mismatch", status: "needs_review" });
+    const sap2 = new Map(sapByName);
+    sap2.set("aeon armani g", [{ code: "TIGVAAA600X600GL0001", name: "Aeon Armani - G", sizeKey: "600x600", source: "sap" }]);
+    expect(matchDesign("aeon armani g", "600x600", catalog, byName, sap2)).toMatchObject({ method: "sap_name_and_size", materialCode: "TIGVAAA600X600GL0001" });
+  });
   it("two SAP codes with the same name and size -> needs review", () => {
     expect(matchDesign("twin name", "600x600", catalog, byName, sapByName)).toMatchObject({ method: "ambiguous", status: "needs_review" });
   });

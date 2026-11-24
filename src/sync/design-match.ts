@@ -1,7 +1,9 @@
 // Design name -> material code mapping (`design_material_map`).
 //
 // Rules (shown to the business owner at the Phase 1 checkpoint):
-//   1. exact_name     Same normalized name as exactly one product code             -> status "auto"   (used)
+//   1. exact_name     Same normalized name as exactly one product code, size agrees -> status "auto"   (used)
+//      size_mismatch  ... but that product's size differs from the display's      -> "needs_review" (NOT used),
+//                     unless SAP has exactly one product with that name in the display's size
 //   2. name_and_size  Same name, several codes, exactly one with the display's size -> status "auto"   (used)
 //   3. ambiguous      Same name, several codes, size doesn't decide                -> "needs_review" (NOT used)
 //   4. sap_name_and_size  Not in RMI's catalogue; SAP tile description + size -> one code -> "auto" (used)
@@ -59,7 +61,7 @@ export function similarity(a: string, b: string): number {
 export interface MatchResult {
   materialCode: string | null;
   materialName: string | null;
-  method: "exact_name" | "name_and_size" | "sap_name_and_size" | "ambiguous" | "fuzzy" | "none";
+  method: "exact_name" | "name_and_size" | "sap_name_and_size" | "size_mismatch" | "ambiguous" | "fuzzy" | "none";
   confidence: number;
   status: "auto" | "needs_review" | "unmapped";
   candidates: Candidate[];
@@ -75,6 +77,18 @@ export function matchDesign(
   // Tier 1: RMI's own product catalogue (what RMIs pick designs from).
   const exact = byName.get(dKey) ?? [];
   const codes = [...new Map(exact.map((c) => [c.code, c])).values()];
+  // A unique name whose size contradicts the display's size is NOT trusted (e.g. RMI "Vintage Pearl 600X600"
+  // vs the only catalogue product, 800x800): look for the right size in SAP, otherwise ask a person.
+  const sizeConflict = codes.length === 1 && !!sizeKey && !!codes[0].sizeKey && codes[0].sizeKey !== sizeKey;
+  if (sizeConflict && sapByName) {
+    const sapSized = [...new Map((sapByName.get(dKey) ?? []).map((c) => [c.code, c])).values()].filter((c) => c.sizeKey === sizeKey);
+    if (sapSized.length === 1) {
+      return { materialCode: sapSized[0].code, materialName: sapSized[0].name, method: "sap_name_and_size", confidence: 0.9, status: "auto", candidates: [] };
+    }
+  }
+  if (sizeConflict) {
+    return { materialCode: null, materialName: null, method: "size_mismatch", confidence: 0, status: "needs_review", candidates: codes };
+  }
   if (codes.length === 1) {
     return { materialCode: codes[0].code, materialName: codes[0].name, method: "exact_name", confidence: 1, status: "auto", candidates: [] };
   }

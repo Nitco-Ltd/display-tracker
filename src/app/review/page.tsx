@@ -9,6 +9,7 @@ import { approve, reject, reset } from "./actions";
 
 const METHOD: Record<string, string> = {
   ambiguous: "Several SAP materials share this name",
+  size_mismatch: "Name matches, but the product's size differs from the size on the display",
   fuzzy: "No exact name; closest similar names",
   none: "Nothing similar found",
 };
