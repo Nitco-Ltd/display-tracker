@@ -116,3 +116,20 @@ negative) equals our not-cancelled totals **to the rupee for all 15 month × typ
 ZCQC). This check is fully independent of RMI.
 
 Not yet compared: NITCO's custom transaction **YCA06** (not published as an OData service; needs an export).
+
+## 8. Reconciliation with YCA06 (NITCO sales register), 1 Aug – 1 Sep 2026
+
+Export provided by the business owner (16,039 lines, sales orgs 1801 + 1802, all divisions).
+
+**Line level (sales org 1801):** all 15,918 YCA06 lines exist in our data with the same invoice, item, customer,
+material, invoice type and net value; our m² equals YCA06 "Qty (Sqmt)" on all 6,728 tile lines.
+YCA06 sold-to = ship-to on every line. Our extra lines are ₹0 sub-items and types YCA06 omits (ZSTM, YSER, ZSTF).
+
+**Totals, Domestic Tiles, org 1801:** YCA06 ₹36,85,96,322 vs ours (confirmed rules) ₹36,80,26,096; difference
+₹5,70,226 (0.15%), fully explained:
+
+| Cause | Amount |
+|---|---|
+| Types our rules ignore: ZDMS ₹6,42,507, ZTDN ₹3,50,050, ZNTI ₹38,286 | +₹10,30,843 |
+| Cancellations: YCA06 lists each original and each cancellation on its own date (S1 −₹16,38,716, S2 +₹2,88,149; later-cancelled ZVDT +₹17,26,776, ZRTI −₹2,95,834, ZCBR −₹5,40,992). We drop cancelled documents and their cancellations entirely, so a cancelled document never moves a month's figure. | −₹4,60,617 |
+| **Total** | **₹5,70,226** |
