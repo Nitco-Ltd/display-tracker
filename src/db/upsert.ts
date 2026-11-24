@@ -15,7 +15,8 @@ export async function upsertMany<T extends SQLiteTable>(
   const keep = new Set(opts.keep ?? []); // property names never overwritten on update (e.g. firstSeenAt)
   const set: Record<string, SQL> = {};
   for (const [prop, col] of Object.entries(cols)) {
-    if (targets.has(col.name) || keep.has(prop)) continue;
+    // Never overwrite the conflict target, primary keys (ids must stay stable) or explicitly kept columns.
+    if (targets.has(col.name) || col.primary || keep.has(prop)) continue;
     set[prop] = sql.raw(`excluded."${col.name}"`);
   }
   const db = getDb();

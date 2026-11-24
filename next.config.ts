@@ -1,9 +1,7 @@
 import type { NextConfig } from "next";
 
+// Internal, always-live dashboard: every page reads the database on each request, so no component caching.
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
   turbopack: {
     rules: {
       "*.css": {

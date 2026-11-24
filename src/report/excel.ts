@@ -2,7 +2,7 @@
 // one sheet "Report" holding one Excel table "Report", columns A–AY, one row per display, in RMI record order.
 // Differences from RMI's file, by design: real numbers and dates (not text), frozen header, widths, number formats.
 import ExcelJS from "exceljs";
-import { displaysWithSales, monthLabel, MONTH_ABBR, windowMonths, type DisplayWithSales } from "@/sales/window";
+import { displaysWithSales, monthLabel, MONTH_ABBR, WINDOW_MONTHS, windowMonths, type DisplayWithSales } from "@/sales/window";
 import { filterWhere, type ReportFilter } from "./filters";
 
 /** Columns A–U, in order, with the field that feeds each (original RMI values, not normalized). */
@@ -30,9 +30,15 @@ export const DISPLAY_COLUMNS: { header: string; value: (r: DisplayWithSales) => 
   { header: "Status", value: (r) => r.status, width: 18 },
 ];
 
-/** Full header row A–AY for a cohort month, e.g. "2026-08" -> […, "Jul-26 Sales Volume", "Jul-26 Sales Value", …]. */
-export function reportHeaders(cohort: string): string[] {
-  const sales = windowMonths(cohort).flatMap((m) => [`${monthLabel(m)} Sales Volume`, `${monthLabel(m)} Sales Value`]);
+/**
+ * Full header row A–AY for a cohort month, e.g. "2026-08" -> […, "Jul-26 Sales Volume", "Jul-26 Sales Value", …].
+ * cohort = null (export spanning several display months): months relative to each display, "M-1" … "M+12".
+ */
+export function reportHeaders(cohort: string | null): string[] {
+  const labels = cohort
+    ? windowMonths(cohort).map(monthLabel)
+    : Array.from({ length: WINDOW_MONTHS }, (_, i) => (i === 1 ? "M" : i === 0 ? "M-1" : `M+${i - 1}`));
+  const sales = labels.flatMap((l) => [`${l} Sales Volume`, `${l} Sales Value`]);
   return [...DISPLAY_COLUMNS.map((c) => c.header), ...sales, "Avg Sales Volume", "Avg Sales Value"];
 }
 
@@ -42,7 +48,7 @@ export function reportFileName(cohort: string): string {
   return `Display_Tracker_Report_-_${MONTH_ABBR[m - 1]}-${y}.xlsx`;
 }
 
-export function buildWorkbook(cohort: string, rows: DisplayWithSales[]): ExcelJS.Workbook {
+export function buildWorkbook(cohort: string | null, rows: DisplayWithSales[]): ExcelJS.Workbook {
   const wb = new ExcelJS.Workbook();
   wb.creator = "Display Tracker";
   wb.created = new Date();

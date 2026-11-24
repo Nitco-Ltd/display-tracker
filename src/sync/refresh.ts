@@ -1,0 +1,39 @@
+// "Refresh now" and the scheduled job share this: RMI sync, then SAP sync, then rebuild open reports.
+// One refresh at a time per process; a second request waits for the running one instead of starting another.
+import { syncRmi } from "./rmi-sync";
+import { syncSap } from "./sap-sync";
+import { openCohorts, writeReports } from "@/report/generate";
+
+let running: Promise<string> | null = null;
+
+export function refreshAll(): Promise<string> {
+  if (!running) {
+    running = (async () => {
+      const parts: string[] = [];
+      const errors: string[] = [];
+      try {
+        const r = await syncRmi();
+        parts.push(`RMI ${r.exportRows} rows (${r.added} new, ${r.changed} changed)`);
+      } catch (e) {
+        errors.push(`RMI: ${(e as Error).message}`);
+      }
+      try {
+        const s = await syncSap();
+        parts.push(s.skipped ? "SAP skipped" : `SAP ${"lines" in s ? s.lines : 0} invoice lines`);
+      } catch (e) {
+        errors.push(`SAP: ${(e as Error).message}`);
+      }
+      try {
+        const w = await writeReports(await openCohorts());
+        parts.push(`${w.length} reports`);
+      } catch (e) {
+        errors.push(`Reports: ${(e as Error).message}`);
+      }
+      if (errors.length) throw new Error(errors.join(" | "));
+      return parts.join(", ");
+    })().finally(() => {
+      running = null;
+    });
+  }
+  return running;
+}

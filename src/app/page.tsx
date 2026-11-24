@@ -1,69 +1,141 @@
-import Image from "next/image";
+import { Suspense } from "react";
+import { FilterBar } from "@/components/FilterBar";
+import { BarChart } from "@/components/BarChart";
+import { Kpi, Section } from "@/components/Kpi";
+import { filterOptions, loadRows, type SearchParams } from "@/analytics/data";
+import { beforeAfter, currentMonth, kpis, monthlyTrend } from "@/analytics/metrics";
+import { inr, inrCompact, m2, monthName, num, pct } from "@/lib/format";
 
-export default function Home() {
+export default async function Overview({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const sp = await searchParams;
+  const [rows, options] = await Promise.all([loadRows(sp), filterOptions()]);
+  const cur = currentMonth();
+  const k = kpis(rows, cur);
+  const ba = beforeAfter(rows, cur);
+  const trend = monthlyTrend(rows, cur);
+  const short = (ym: string) => monthName(ym).replace(/ 20(\d\d)$/, "-$1");
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <>
+      <Suspense>
+        <FilterBar options={options} />
+      </Suspense>
+
+      <div className="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-6 mb-5">
+        <Kpi label="Displays" value={num(k.displays)} sub={`${num(k.unlinked)} without a linked design`} />
+        <Kpi label="Dealers covered" value={num(k.dealers)} />
+        <Kpi label="Displays that led to sales" value={pct(k.conversion)} sub={`${num(k.convertedPairs)} of ${num(k.measurablePairs)} display pairs`} />
+        <Kpi label="Sales after display" value={inrCompact(k.afterValue)} sub={m2(k.afterVolume)} />
+        <Kpi label="Avg sales per display" value={inrCompact(k.avgValuePerPair)} sub={`${m2(k.avgVolumePerPair)} · M+1 to M+12 so far`} />
+        <Kpi label="Avg per display per month" value={inrCompact(k.avgMonthlyValuePerPair)} sub="over months elapsed" />
+      </div>
+
+      <Section
+        title="Before vs after display: average sales per display pair"
+        note={
+          <>
+            Same dealer and same design. M = display month, M−1 = the month before, M+3 = three months after. Each bar averages only
+            display pairs for which that month has started, so later bars cover fewer, older displays (n shown below).
+          </>
+        }
+      >
+        <BarChart
+          ariaLabel="Average sales value per display pair by month relative to display"
+          format="inr"
+          bars={ba.map((p) => ({
+            key: p.label,
+            label: p.label,
+            value: p.avgValue,
+            tooltip: [p.label, `Avg value ${inr(p.avgValue)}`, `Avg volume ${m2(p.avgVolume)}`, `${pct(p.withSales)} with sales`, `n = ${num(p.pairs)} pairs`],
+          }))}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+        <table className="data mt-3">
+          <thead>
+            <tr>
+              <th>Month</th>
+              {ba.map((p) => (
+                <th key={p.label} className="num">
+                  {p.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Avg value</td>
+              {ba.map((p) => (
+                <td key={p.label} className="num">
+                  {Number.isFinite(p.avgValue) ? inr(p.avgValue) : "–"}
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <td>Avg volume</td>
+              {ba.map((p) => (
+                <td key={p.label} className="num">
+                  {Number.isFinite(p.avgVolume) ? m2(p.avgVolume) : "–"}
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <td>Pairs with sales</td>
+              {ba.map((p) => (
+                <td key={p.label} className="num">
+                  {pct(p.withSales)}
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <td>Display pairs (n)</td>
+              {ba.map((p) => (
+                <td key={p.label} className="num">
+                  {num(p.pairs)}
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </Section>
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Section title="Displays made per month" note="Number of displays logged in RMI, by display month.">
+          <BarChart
+            ariaLabel="Displays per month"
+            format="num"
+            bars={trend.map((t) => ({
+              key: t.month,
+              label: short(t.month),
+              value: t.displays,
+              muted: t.month === cur,
+              tooltip: [monthName(t.month), `${num(t.displays)} displays`, t.month === cur ? "Month in progress" : ""].filter(Boolean),
+            }))}
+          />
+        </Section>
+        <Section title="Sales that followed, by display month" note="After-display sales (M+1 onwards, so far) of each month's displays. Recent months have had less time to sell.">
+          <BarChart
+            ariaLabel="After-display sales by display month"
+            format="inr"
+            bars={trend.map((t) => ({
+              key: t.month,
+              label: short(t.month),
+              value: t.afterValue,
+              muted: t.month === cur,
+              tooltip: [monthName(t.month), `Sales after display ${inr(t.afterValue)}`, `Led to sales: ${pct(t.conversion)} of ${num(t.measurablePairs)} pairs`],
+            }))}
+          />
+        </Section>
+      </div>
+
+      <details className="card p-4 mb-5 text-[13px]">
+        <summary className="cursor-pointer font-medium">How these numbers are calculated</summary>
+        <ul className="list-disc pl-5 mt-2 space-y-1 text-ink-2">
+          <li>Sales come from SAP invoices (sales org 1801): ZVDT invoices count, ZRTI returns are subtracted, ZCBR/ZCPD/ZCQC credit notes reduce value only. Value is net of GST; volume is in m².</li>
+          <li>A display gets sales only for its own dealer and the SAP material its design is linked to. {num(k.unlinked)} of these displays have no linked design yet (blank design in RMI, or waiting for review).</li>
+          <li>&quot;Display pair&quot; = same dealer + same design + same display month. Two panels of one design count once in rates and averages.</li>
+          <li>Totals never count the same dealer × design × month of sales twice, even if it falls after several displays. {num(k.duplicateRows)} duplicate rows were merged here.</li>
+          <li>&quot;Led to sales&quot; = any sales from M+1 onwards (months so far). Displays from the current month, and unlinked displays, are left out of rates.</li>
+        </ul>
+      </details>
+    </>
   );
 }
