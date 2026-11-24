@@ -19,10 +19,13 @@ export function windowMonths(cohort: string): string[] {
   return Array.from({ length: WINDOW_MONTHS }, (_, i) => addMonths(cohort, i - WINDOW_BEFORE));
 }
 
+// Fixed list on purpose: locale month names vary ("Sept" in en-GB), the report needs "Sep".
+export const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 /** "2026-07" -> "Jul-26" (report header style) */
 export function monthLabel(ym: string): string {
   const [y, m] = ym.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, 1)).toLocaleString("en-GB", { month: "short", timeZone: "UTC" }) + "-" + String(y).slice(2);
+  return `${MONTH_ABBR[m - 1]}-${String(y).slice(2)}`;
 }
 
 export interface MonthSales {
