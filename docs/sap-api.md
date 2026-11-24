@@ -104,5 +104,5 @@ Cancelled invoices (`BillingDocumentIsCancelled`) are always excluded. Month = b
 **First load:** 387,327 lines / 53,578 invoices since 2025-03-01, 24,569 materials, ~2.5 minutes.
 300 of 307 RMI dealers found in SAP; SAP material numbers are identical to RMI's product codes.
 
-**Open:** whether sales of variant codes of the same design (e.g. "TROPICANA (PO)", "(RPO)") should count for a
-display. Today only the one linked code counts.
+**Design variants (decided 2026-11-24):** a display counts sales of its **own linked SAP material code only**.
+Variant codes of the same design (e.g. "TROPICANA (PO)", "(HW)", "(RPO)") are not added.

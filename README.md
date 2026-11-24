@@ -173,7 +173,7 @@ Run these in Command Prompt in the project folder.
 
 Cancelled invoices are ignored. Month = invoice date. Value = net amount, **before GST**. Volume = **m²**, converted from boxes using each tile's conversion in SAP (e.g. 1 box of 600×1200 = 1.44 m²).
 
-**Design → SAP material.** RMI only stores the design name. The app links it to a SAP material automatically when the name (and, if needed, the size) points to exactly one product; otherwise it goes to **Design review**. Displays with a blank design in RMI can't get sales.
+**Design → SAP material.** Each display counts sales of **one** SAP material: its design's own code. Variants of the same design (e.g. "(PO)", "(HW)", "(RPO)") are not added. RMI only stores the design name. The app links it to a SAP material automatically when the name (and, if needed, the size) points to exactly one product; otherwise it goes to **Design review**. Displays with a blank design in RMI can't get sales.
 
 **Dashboard rules.**
 
