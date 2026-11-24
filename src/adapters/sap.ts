@@ -2,6 +2,8 @@
 // READ-ONLY: this module only ever issues HTTP GET. Never add POST/PUT/PATCH/DELETE here.
 // Services/fields are the standard S/4HANA APIs (API_BILLING_DOCUMENT_SRV, API_PRODUCT_SRV).
 // STATUS: written against the standard API spec; not yet tested on NITCO's system (see docs/sap-api.md).
+import { readFileSync } from "node:fs";
+import { Agent } from "undici";
 import { z } from "zod";
 import { config, csv, requireConfig } from "@/lib/config";
 import { request } from "@/lib/http";
@@ -72,12 +74,27 @@ const listEnvelope = z.object({
 
 export class SapClient {
   private readonly base: string;
+  private readonly dispatcher: Agent | undefined;
 
   constructor() {
     const c = config();
     // Login: user + password (NITCO's system), or an api.sap.com API key (SAP's public sandbox, demo data).
     requireConfig(c.SAP_API_KEY && !c.SAP_PASS ? ["SAP_ODATA_BASE_URL"] : ["SAP_ODATA_BASE_URL", "SAP_USER", "SAP_PASS"], "SAP OData");
     this.base = c.SAP_ODATA_BASE_URL!.replace(/\/?$/, "/");
+    if (c.SAP_TLS_CA_FILE || c.SAP_TLS_SERVERNAME) {
+      this.dispatcher = new Agent({
+        connect: {
+          ca: c.SAP_TLS_CA_FILE ? readFileSync(c.SAP_TLS_CA_FILE, "utf8") : undefined,
+          servername: c.SAP_TLS_SERVERNAME, // hostname checked against the certificate
+          rejectUnauthorized: true,
+        },
+      });
+    }
+  }
+
+  private get(url: string, label: string) {
+    // Only GET, ever. `dispatcher` is Node's way to pass TLS options to fetch.
+    return request(url, { label, method: "GET", headers: this.headers(), dispatcher: this.dispatcher } as Parameters<typeof request>[1]);
   }
 
   private headers(): Record<string, string> {
@@ -103,7 +120,7 @@ export class SapClient {
     let skip = 0;
     let next: string | undefined = this.url(path, { ...params, $top: String(pageSize), $skip: "0" });
     while (next) {
-      const res = await request(next, { label: `SAP ${path}`, method: "GET", headers: this.headers() });
+      const res = await this.get(next, `SAP ${path}`);
       const parsed = listEnvelope.safeParse(await res.json());
       if (!parsed.success) throw new SapShapeError(path, "missing d.results");
       const d = parsed.data.d;
@@ -207,11 +224,7 @@ export class SapClient {
 
   /** One small call to check connectivity and print field names (used by `npm run sync:sap -- --probe`). */
   async probe(): Promise<{ header: string[]; item: string[] }> {
-    const res = await request(this.url("API_BILLING_DOCUMENT_SRV/A_BillingDocument", { $top: "1", $expand: "to_Item" }), {
-      label: "SAP probe",
-      method: "GET",
-      headers: this.headers(),
-    });
+    const res = await this.get(this.url("API_BILLING_DOCUMENT_SRV/A_BillingDocument", { $top: "1", $expand: "to_Item" }), "SAP probe");
     const body = listEnvelope.parse(await res.json());
     const rows = Array.isArray(body.d) ? body.d : body.d.results;
     const h = rows[0] ?? {};

@@ -1,6 +1,6 @@
 // Joins display rows to SAP monthly sales over the report window:
 // month −1 (before display) … month +12 after the display month = 14 months.
-import { and, eq, inArray, type SQL } from "drizzle-orm";
+import { and, asc, eq, inArray, type SQL } from "drizzle-orm";
 import { getDb, tables } from "@/db/client";
 
 export const WINDOW_BEFORE = 1;
@@ -39,10 +39,24 @@ export interface DisplayWithSales extends DisplayRow {
   avgValue: number;
 }
 
+/**
+ * Report rule (verified against the Aug-2026 sample): average = sum of all 14 window months ÷ 14,
+ * with months that haven't happened yet counted as 0. Do not change without the business owner's OK.
+ */
+export function reportAverages(sales: { volume: number; value: number }[]): { avgVolume: number; avgValue: number } {
+  const sumV = sales.reduce((a, s) => a + s.volume, 0);
+  const sumR = sales.reduce((a, s) => a + s.value, 0);
+  return { avgVolume: +(sumV / WINDOW_MONTHS).toFixed(3), avgValue: +(sumR / WINDOW_MONTHS).toFixed(3) };
+}
+
 export async function displaysWithSales(where?: SQL): Promise<DisplayWithSales[]> {
   const db = getDb();
   const t = tables();
-  const rows = await db.select().from(t.rmiDisplay).where(where ? and(eq(t.rmiDisplay.inSource, 1), where) : eq(t.rmiDisplay.inSource, 1));
+  const rows = await db
+    .select()
+    .from(t.rmiDisplay)
+    .where(where ? and(eq(t.rmiDisplay.inSource, 1), where) : eq(t.rmiDisplay.inSource, 1))
+    .orderBy(asc(t.rmiDisplay.displayTrackerId), asc(t.rmiDisplay.refNo)); // RMI's own order (record id)
 
   // Fetch sales only for the dealers involved.
   const dealers = [...new Set(rows.map((r) => r.dealerCode).filter(Boolean))] as string[];
@@ -60,13 +74,6 @@ export async function displaysWithSales(where?: SQL): Promise<DisplayWithSales[]
       const s = r.dealerCode && r.materialCode ? salesMap.get(`${r.dealerCode}|${r.materialCode}|${m}`) : undefined;
       return { month: m, volume: s?.volume ?? 0, value: s?.value ?? 0 };
     });
-    const sumV = sales.reduce((a, s) => a + s.volume, 0);
-    const sumR = sales.reduce((a, s) => a + s.value, 0);
-    return {
-      ...r,
-      sales,
-      avgVolume: +(sumV / WINDOW_MONTHS).toFixed(3),
-      avgValue: +(sumR / WINDOW_MONTHS).toFixed(3),
-    };
+    return { ...r, sales, ...reportAverages(sales) };
   });
 }

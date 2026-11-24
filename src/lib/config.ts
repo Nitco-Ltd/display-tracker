@@ -25,6 +25,10 @@ const schema = z.object({
   SAP_PASS: z.string().optional(),
   SAP_API_KEY: z.string().optional(), // only for SAP's api.sap.com sandbox (demo data); NITCO's system uses user/password
   SAP_LANGUAGE: z.string().default("EN"),
+  // SAP's https certificate is self-signed (SAP HEC). Trust exactly that certificate, and check it against
+  // its real name even though we connect by IP. Never disable certificate checks instead.
+  SAP_TLS_CA_FILE: z.string().optional(), // e.g. ./certs/sap-prd.pem
+  SAP_TLS_SERVERNAME: z.string().optional(), // e.g. vhntops4ci.sap.nitco.in
   SAP_SALES_ORGS: z.string().default(""), // comma list; blank = all
   // Billing document types. PENDING CONFIRMATION by the SAP team (docs/sap-api.md §4.6).
   SAP_SALES_DOC_TYPES: z.string().default("F2"),
