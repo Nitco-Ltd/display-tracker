@@ -40,6 +40,15 @@ const schema = z.object({
 
   // Outputs
   REPORT_OUTPUT_DIR: z.string().default("./reports"),
+  LOG_DIR: z.string().default("./logs"),
+
+  // Optional email alert when the daily job fails (leave SMTP_HOST blank to switch off)
+  ALERT_EMAIL_TO: z.string().optional(), // comma list
+  SMTP_HOST: z.string().optional(), // e.g. smtp.gmail.com or the company relay
+  SMTP_PORT: z.coerce.number().int().default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().optional(),
 
   // HTTP behaviour (both systems)
   HTTP_TIMEOUT_MS: z.coerce.number().int().default(60_000),

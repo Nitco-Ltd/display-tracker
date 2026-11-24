@@ -5,14 +5,17 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3000",
     "lint": "eslint",
     "db:generate": "drizzle-kit generate && DRIZZLE_DIALECT=pg drizzle-kit generate",
     "sync:rmi": "tsx scripts/sync-rmi.ts",
     "sync:sap": "tsx scripts/sync-sap.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "build:report": "tsx scripts/build-report.ts"
+    "build:report": "tsx scripts/build-report.ts",
+    "daily": "tsx scripts/daily.ts",
+    "sap:cert": "tsx scripts/sap-cert.ts",
+    "decisions": "tsx scripts/decisions.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",
@@ -21,6 +24,7 @@
     "exceljs": "^4.4.0",
     "fflate": "^0.8.3",
     "next": "16.4.6",
+    "nodemailer": "^10.6.1",
     "postgres": "^4.1.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -29,8 +33,11 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.6.0",
+    "@electric-sql/pglite-socket": "^0.3.0",
     "@tailwindcss/turbopack": "4.3.3",
     "@types/node": "^22.20.5",
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.31.11",
@@ -41,5 +48,8 @@
     "typescript": "^5",
     "vitest": "^5.1.1"
   },
-  "type": "module"
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  }
 }
