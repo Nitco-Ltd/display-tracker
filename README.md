@@ -158,9 +158,11 @@ Run these in Command Prompt in the project folder.
 
 ## 8. How the numbers are calculated
 
-**Report window.** Each display gets its dealer's sales of its design from **1 month before** the display month to **12 months after** (14 months). Report columns V–AW are those 14 months; the month headers follow the report's month (Aug-2026 report: Jul-26 … Aug-27).
+**Report window.** Each display gets its dealer's sales of its design from **1 month before** the display month to **12 months after** (14 months). The month headers follow the report's month (Aug-2026 report: Jul-26 … Aug-27).
 
-**Average (report).** Avg Sales Volume / Value = **sum of the 14 months ÷ 14**, with months that haven't happened yet counted as 0 (same as RMI's original report). The dashboard also shows an average over elapsed months only.
+**Only months that have started are shown** (decided 24 Nov 2026). A report gains one month column each month until its window is complete, e.g. the Sep-2026 report built in Nov-2026 has Aug-26, Sep-26, Oct-26 and Nov-26; from Sep-2027 on it has all 14 months (columns V–AW, the same layout as RMI's report). The daily job rebuilds the reports, so new months appear automatically.
+
+**Average (report).** Avg Sales Volume / Value = **sum of the 14 months ÷ 14**, with months that haven't happened yet counted as 0 (same as RMI's original report). So for a report that isn't complete yet, it is the sum of the months shown ÷ 14. The dashboard also shows an average over elapsed months only.
 
 **Sales (from SAP, sales org 1801, domestic).**
 

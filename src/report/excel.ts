@@ -34,12 +34,25 @@ export const DISPLAY_COLUMNS: { header: string; value: (r: DisplayWithSales) => 
  * Full header row A–AY for a cohort month, e.g. "2026-08" -> […, "Jul-26 Sales Volume", "Jul-26 Sales Value", …].
  * cohort = null (export spanning several display months): months relative to each display, "M-1" … "M+12".
  */
-export function reportHeaders(cohort: string | null): string[] {
+export function reportHeaders(cohort: string | null, upTo: string = currentMonth()): string[] {
   const labels = cohort
-    ? windowMonths(cohort).map(monthLabel)
+    ? visibleMonths(cohort, upTo).map(monthLabel)
     : Array.from({ length: WINDOW_MONTHS }, (_, i) => (i === 1 ? "M" : i === 0 ? "M-1" : `M+${i - 1}`));
   const sales = labels.flatMap((l) => [`${l} Sales Volume`, `${l} Sales Value`]);
   return [...DISPLAY_COLUMNS.map((c) => c.header), ...sales, "Avg Sales Volume", "Avg Sales Value"];
+}
+
+/** "yyyy-mm" of today. */
+export function currentMonth(now = new Date()): string {
+  return now.toISOString().slice(0, 7);
+}
+
+/**
+ * Months of a cohort's 14-month window that have started (decided 2026-11-24: future months are left out,
+ * so the report grows by one month each month until it is complete). E.g. Sep-2026 in Nov-2026 -> Aug–Nov 2026.
+ */
+export function visibleMonths(cohort: string, upTo: string = currentMonth()): string[] {
+  return windowMonths(cohort).filter((m) => m <= upTo);
 }
 
 /** "2026-08" -> "Display_Tracker_Report_-_Aug-2026.xlsx" */
@@ -48,17 +61,18 @@ export function reportFileName(cohort: string): string {
   return `Display_Tracker_Report_-_${MONTH_ABBR[m - 1]}-${y}.xlsx`;
 }
 
-export function buildWorkbook(cohort: string | null, rows: DisplayWithSales[]): ExcelJS.Workbook {
+export function buildWorkbook(cohort: string | null, rows: DisplayWithSales[], upTo: string = currentMonth()): ExcelJS.Workbook {
   const wb = new ExcelJS.Workbook();
   wb.creator = "Display Tracker";
   wb.created = new Date();
   const ws = wb.addWorksheet("Report", { views: [{ state: "frozen", ySplit: 1 }] });
-  const headers = reportHeaders(cohort);
+  const headers = reportHeaders(cohort, upTo);
   const nDisplay = DISPLAY_COLUMNS.length;
+  const nMonths = cohort ? visibleMonths(cohort, upTo).length : WINDOW_MONTHS; // window starts at M−1, so a prefix
 
   const data = rows.map((r) => [
     ...DISPLAY_COLUMNS.map((c) => c.value(r) ?? null),
-    ...r.sales.flatMap((s) => [s.volume, s.value]),
+    ...r.sales.slice(0, nMonths).flatMap((s) => [s.volume, s.value]),
     r.avgVolume,
     r.avgValue,
   ]);
@@ -94,8 +108,12 @@ export async function reportRows(cohort: string, filter: ReportFilter = {}): Pro
   return displaysWithSales(filterWhere({ ...filter, cohortMonths: [cohort] }));
 }
 
-export async function buildReportBuffer(cohort: string, filter: ReportFilter = {}): Promise<{ buffer: Buffer; rows: number }> {
+export async function buildReportBuffer(
+  cohort: string,
+  filter: ReportFilter = {},
+  upTo: string = currentMonth(),
+): Promise<{ buffer: Buffer; rows: number }> {
   const rows = await reportRows(cohort, filter);
-  const buffer = Buffer.from(await buildWorkbook(cohort, rows).xlsx.writeBuffer());
+  const buffer = Buffer.from(await buildWorkbook(cohort, rows, upTo).xlsx.writeBuffer());
   return { buffer, rows: rows.length };
 }

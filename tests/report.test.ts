@@ -22,7 +22,7 @@ async function readBack(buf: Buffer) {
 describe("report layout", () => {
   it("builds headers dynamically from the cohort month", async () => {
     const { reportHeaders, reportFileName } = await import("@/report/excel");
-    const h = reportHeaders("2026-08");
+    const h = reportHeaders("2026-08", "2027-08"); // complete window
     expect(h).toHaveLength(51);
     expect(h[0]).toBe("Sequence No");
     expect(h[20]).toBe("Status");
@@ -32,7 +32,7 @@ describe("report layout", () => {
     expect(h[25]).toBe("Sep-26 Sales Volume");
     expect(h[48]).toBe("Aug-27 Sales Value");
     expect(h.slice(-2)).toEqual(["Avg Sales Volume", "Avg Sales Value"]);
-    expect(reportHeaders("2026-01")[21]).toBe("Dec-25 Sales Volume");
+    expect(reportHeaders("2026-01", "2027-01")[21]).toBe("Dec-25 Sales Volume");
     expect(reportFileName("2026-08")).toBe("Display_Tracker_Report_-_Aug-2026.xlsx");
     expect(reportFileName("2026-09")).toBe("Display_Tracker_Report_-_Sep-2026.xlsx");
   });
@@ -40,7 +40,7 @@ describe("report layout", () => {
   it.skipIf(!hasSample)("headers are identical to the sample's", async () => {
     const { reportHeaders } = await import("@/report/excel");
     const s = readXlsx(new Uint8Array(readFileSync(SAMPLE)));
-    expect(reportHeaders("2026-08")).toEqual(Array.from({ length: 51 }, (_, i) => s.header[colLetter(i + 1)]));
+    expect(reportHeaders("2026-08", "2027-08")).toEqual(Array.from({ length: 51 }, (_, i) => s.header[colLetter(i + 1)]));
   });
 
   it.skipIf(!hasSample)("average = sum of 14 months ÷ 14 reproduces every sample row", async () => {
@@ -52,6 +52,35 @@ describe("report layout", () => {
       expect(avg.avgVolume).toBeCloseTo(+r.AX, 3);
       expect(avg.avgValue).toBeCloseTo(+r.AY, 3);
     }
+  });
+});
+
+describe("months that haven't started are left out", () => {
+  it("Sep-2026 report built in Nov-2026 has Aug–Nov 2026 only", async () => {
+    const { reportHeaders, visibleMonths } = await import("@/report/excel");
+    expect(visibleMonths("2026-09", "2026-11")).toEqual(["2026-08", "2026-09", "2026-10", "2026-11"]);
+    const h = reportHeaders("2026-09", "2026-11");
+    expect(h).toHaveLength(21 + 4 * 2 + 2);
+    expect(h.slice(21, 29)).toEqual([
+      "Aug-26 Sales Volume", "Aug-26 Sales Value", "Sep-26 Sales Volume", "Sep-26 Sales Value",
+      "Oct-26 Sales Volume", "Oct-26 Sales Value", "Nov-26 Sales Volume", "Nov-26 Sales Value",
+    ]);
+    expect(h.slice(-2)).toEqual(["Avg Sales Volume", "Avg Sales Value"]);
+    expect(reportHeaders("2026-11", "2026-11")).toHaveLength(21 + 2 * 2 + 2); // Oct-26, Nov-26
+  });
+
+  it("writes only the visible months' numbers, averages unchanged (÷14)", async () => {
+    const { buildWorkbook } = await import("@/report/excel");
+    const { windowMonths, reportAverages } = await import("@/sales/window");
+    const sales = windowMonths("2026-09").map((m, i) => ({ month: m, volume: i, value: i * 10 }));
+    const row = { refNo: "X/1", cohortMonth: "2026-09", sales, ...reportAverages(sales) } as never;
+    const wb = buildWorkbook("2026-09", [row], "2026-11");
+    const buf = Buffer.from(await wb.xlsx.writeBuffer());
+    const ws = await readBack(buf);
+    const r = ws.getRow(2);
+    expect([22, 23, 28, 29].map((c) => r.getCell(c).value)).toEqual([0, 0, 3, 30]); // Aug vol/val, Nov vol/val
+    expect(r.getCell(30).value).toBeCloseTo(91 / 14, 3); // avg volume: all 14 months (0..13) ÷ 14
+    expect(ws.getRow(1).cellCount).toBe(31);
   });
 });
 
@@ -115,7 +144,7 @@ describe.skipIf(!hasSample)("rebuild Aug-2026 from the sample as fixture data", 
     );
     if (sales.length) await db.insert(t.sapSalesMonthly).values(sales);
 
-    const { buffer, rows } = await buildReportBuffer("2026-08");
+    const { buffer, rows } = await buildReportBuffer("2026-08", {}, "2027-08"); // complete window = sample layout
     expect(rows).toBe(831);
     const ws = await readBack(buffer);
     expect(ws.name).toBe("Report");
