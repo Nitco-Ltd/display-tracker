@@ -82,7 +82,10 @@ export async function filterOptions(): Promise<FilterOptions> {
   const dealers = new Map<string, string>();
   for (const r of rows) if (r.dealer) dealers.set(r.dealer, r.dealerName ?? r.dealer);
   return {
-    months: uniq((r) => r.month).reverse(),
+    // Future months only come from typos in RMI's display date (e.g. SZ1/KT/4 dated 05 Feb 2029): not offered.
+    months: uniq((r) => r.month)
+      .filter((m) => m <= new Date().toISOString().slice(0, 7))
+      .reverse(),
     zones: uniq((r) => r.zone),
     regions: uniq((r) => r.region),
     rmis: uniq((r) => r.rmi),
