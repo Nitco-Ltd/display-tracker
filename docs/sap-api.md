@@ -77,3 +77,32 @@ confirm them against our system.
 | Invoice spot-check | 5–10 known invoices for RMI dealers (from the dealers or the sales team) appear with the same dealer, design, quantity and value |
 
 Note: RMI's own Display Tracker Report sales figures are **not** used for validation (known issues, per business owner).
+
+---
+
+## 6. NITCO production setup (confirmed 2026-11-24)
+
+**Connection:** S4 PRD (system PS4), `https://192.168.81.61:44300/sap/opu/odata/sap/`, client 100, office network / VPN only.
+The https certificate is self-signed by SAP HEC (`CN=vhntops4ci.sap.nitco.in`); the app trusts exactly that
+certificate (`certs/sap-prd.pem`) and checks that name. Services `API_BILLING_DOCUMENT_SRV` and `API_PRODUCT_SRV`
+are active on PRD (not on QAS, 192.168.81.88). Read access verified with user `100661`.
+
+**Sales rules (confirmed by the business owner):**
+
+| Setting | Value | Meaning |
+|---|---|---|
+| `SAP_SALES_ORGS` | `1801` | Domestic (INR). 1802 = export (USD/EUR) is excluded |
+| `SAP_SALES_DOC_TYPES` | `ZVDT` | Normal tile invoice → +quantity, +value |
+| `SAP_RETURN_DOC_TYPES` | `ZRTI` | Tile return credit note → −quantity, −value |
+| `SAP_VALUE_ONLY_DOC_TYPES` | `ZCBR,ZCPD,ZCQC` | Rate-difference / claim credit notes → −value only |
+| everything else | ignored | Marble (ZMAR, ZMRO, ZMBR, ZMRJ), stock transfer (ZSTM), mosaic/services (ZDMO, ZSER, YSER, ZSTF, ZAF1, ZSCR), samples (ZDMS, YDMS), export (ZEXO), debit notes (ZTDN), ZNTI, cancellations (S1–S3) and pro forma (ZKB, YSTM, YDMS) |
+
+Cancelled invoices (`BillingDocumentIsCancelled`) are always excluded. Month = billing date. Value = `NetAmount`
+(before GST). Volume = billed quantity converted to m² with the material's unit conversion (e.g. Marlow Frost
+600×1200: 1 box = 1.44 m²).
+
+**First load:** 387,327 lines / 53,578 invoices since 2025-03-01, 24,569 materials, ~2.5 minutes.
+300 of 307 RMI dealers found in SAP; SAP material numbers are identical to RMI's product codes.
+
+**Open:** whether sales of variant codes of the same design (e.g. "TROPICANA (PO)", "(RPO)") should count for a
+display. Today only the one linked code counts.
