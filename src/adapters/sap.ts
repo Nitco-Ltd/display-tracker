@@ -74,12 +74,15 @@ export class SapClient {
   private readonly base: string;
 
   constructor() {
-    requireConfig(["SAP_ODATA_BASE_URL", "SAP_USER", "SAP_PASS"], "SAP OData");
-    this.base = config().SAP_ODATA_BASE_URL!.replace(/\/?$/, "/");
+    const c = config();
+    // Login: user + password (NITCO's system), or an api.sap.com API key (SAP's public sandbox, demo data).
+    requireConfig(c.SAP_API_KEY && !c.SAP_PASS ? ["SAP_ODATA_BASE_URL"] : ["SAP_ODATA_BASE_URL", "SAP_USER", "SAP_PASS"], "SAP OData");
+    this.base = c.SAP_ODATA_BASE_URL!.replace(/\/?$/, "/");
   }
 
   private headers(): Record<string, string> {
     const c = config();
+    if (c.SAP_API_KEY && !c.SAP_PASS) return { Accept: "application/json", APIKey: c.SAP_API_KEY };
     return {
       Accept: "application/json",
       Authorization: "Basic " + Buffer.from(`${c.SAP_USER}:${c.SAP_PASS}`).toString("base64"),

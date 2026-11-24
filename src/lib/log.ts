@@ -7,7 +7,7 @@ const SECRET_PATTERNS: RegExp[] = [
 export function redact(s: string): string {
   let out = s;
   for (const p of SECRET_PATTERNS) out = out.replace(p, "$1<redacted>");
-  for (const k of ["RMI_PASS", "RMI_APP_KEY", "SAP_PASS"]) {
+  for (const k of ["RMI_PASS", "RMI_APP_KEY", "SAP_PASS", "SAP_API_KEY"]) {
     const v = process.env[k];
     if (v && v.length >= 4) out = out.split(v).join("<redacted>");
   }

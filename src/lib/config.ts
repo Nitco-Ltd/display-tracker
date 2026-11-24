@@ -23,6 +23,7 @@ const schema = z.object({
   SAP_CLIENT: z.string().optional(), // sap-client, e.g. 100
   SAP_USER: z.string().optional(),
   SAP_PASS: z.string().optional(),
+  SAP_API_KEY: z.string().optional(), // only for SAP's api.sap.com sandbox (demo data); NITCO's system uses user/password
   SAP_LANGUAGE: z.string().default("EN"),
   SAP_SALES_ORGS: z.string().default(""), // comma list; blank = all
   // Billing document types. PENDING CONFIRMATION by the SAP team (docs/sap-api.md §4.6).
