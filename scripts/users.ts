@@ -12,12 +12,29 @@
 // New passwords are printed once. Give each person their own; they are stored only as hashes.
 import "./env";
 import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { eq } from "drizzle-orm";
 import { closeDb, getDb, tables } from "@/db/client";
 import { ensureSchema } from "@/db/migrate";
 import { generatePassword, hashPassword } from "@/auth/session";
 
 const ROLES = ["admin", "zonal", "rmi"] as const;
+
+/**
+ * Hands a new password to the admin without writing it into logs or chat transcripts: on a Mac it goes to the
+ * clipboard (paste it into your message to the user); elsewhere, or with --print, it is printed.
+ */
+function showPassword(email: string, password: string): string {
+  if (process.platform === "darwin" && !process.argv.includes("--print")) {
+    try {
+      execFileSync("pbcopy", { input: password });
+      return "password copied to clipboard (paste it to the person now; it is not shown)";
+    } catch {
+      /* fall through */
+    }
+  }
+  return `password: ${password}`;
+}
 type Role = (typeof ROLES)[number];
 
 async function known(): Promise<{ zones: Set<string>; rmis: Set<string> }> {
@@ -26,7 +43,9 @@ async function known(): Promise<{ zones: Set<string>; rmis: Set<string> }> {
   return { zones: new Set(rows.map((r) => r.zone ?? "")), rmis: new Set(rows.map((r) => r.rmi ?? "")) };
 }
 
-async function addUser(email: string, name: string, role: string, scope: string | undefined, k: Awaited<ReturnType<typeof known>>) {
+// bulk (CSV import): several passwords at once can't all sit on the clipboard, so they are printed.
+// Run imports in the Terminal app, not in a chat or a logged shell.
+async function addUser(email: string, name: string, role: string, scope: string | undefined, k: Awaited<ReturnType<typeof known>>, bulk = false) {
   email = email.trim().toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error(`Not an email: ${email}`);
   if (!ROLES.includes(role as Role)) throw new Error(`Role must be admin, zonal or rmi (got "${role}")`);
@@ -50,7 +69,7 @@ async function addUser(email: string, name: string, role: string, scope: string 
     .insert(t.appUser)
     .values(row)
     .onConflictDoUpdate({ target: t.appUser.email, set: { name: row.name, role, zone: row.zone, rmiName: row.rmiName, passwordHash: row.passwordHash, active: 1, updatedAt: now } });
-  console.log(`${email}\t${role}${scope ? ` (${scope})` : ""}\tpassword: ${password}`);
+  console.log(`${email}\t${role}${scope ? ` (${scope})` : ""}\t${bulk ? `password: ${password}` : showPassword(email, password)}`);
 }
 
 async function main() {
@@ -70,7 +89,7 @@ async function main() {
     for (const line of lines.slice(/^email,/i.test(lines[0]) ? 1 : 0)) {
       const [email, name, role, scope] = line.split(",").map((x) => x.trim().replace(/^"|"$/g, ""));
       try {
-        await addUser(email, name, role, scope || undefined, k);
+        await addUser(email, name, role, scope || undefined, k, true);
       } catch (e) {
         console.error(`SKIPPED ${email}: ${(e as Error).message}`);
       }
@@ -80,7 +99,7 @@ async function main() {
   if (cmd === "reset") {
     const password = generatePassword();
     const r = await db.update(t.appUser).set({ passwordHash: hashPassword(password), updatedAt: new Date().toISOString() }).where(eq(t.appUser.email, a[0].toLowerCase())).returning({ e: t.appUser.email });
-    console.log(r.length ? `${a[0]}\tnew password: ${password}` : `No user ${a[0]}`);
+    console.log(r.length ? `${a[0]}\tnew ${showPassword(a[0], password)}` : `No user ${a[0]}`);
     return;
   }
   if (cmd === "disable" || cmd === "enable") {
