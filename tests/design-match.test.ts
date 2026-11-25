@@ -130,3 +130,16 @@ describe("settling review items from SAP sales", () => {
     expect(decideBySales("tropicana rose", "600x600", open, ev({}))).toBeNull();
   });
 });
+
+describe("catalogue has the name but not the size", () => {
+  it("finds the size in SAP (Rio Bianco Beige 300x600 wall tile)", () => {
+    const rmi: Candidate[] = [
+      { code: "TICESRT300X300GLMA12001", name: "RIO BIANCO BEIGE", sizeKey: "300x300", source: "rmi" },
+      { code: "TICESRT600X600GLMA04002", name: "RIO BIANCO BEIGE", sizeKey: "600x600", source: "rmi" },
+    ];
+    const sap: Candidate[] = [{ code: "TIWACNT600X300GLMA06005", name: "Rio Bianco Beige", sizeKey: "300x600", source: "sap" }];
+    const k = designKey("Rio Bianco Beige");
+    const m = matchDesign(k, "300x600", [...rmi, ...sap], new Map([[k, rmi]]), new Map([[k, sap]]));
+    expect(m).toMatchObject({ materialCode: "TIWACNT600X300GLMA06005", method: "sap_name_and_size", status: "auto" });
+  });
+});

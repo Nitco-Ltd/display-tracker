@@ -125,6 +125,13 @@ export function matchDesign(
     }
     const twin = onePackagingFamily(sized);
     if (twin) return { materialCode: twin.code, materialName: twin.name, method: "packaging_variants", confidence: 0.9, status: "auto", candidates: [] };
+    // RMI's catalogue has the name, but not in the display's size: SAP may have it in that size
+    // (e.g. Rio Bianco Beige: catalogue has 300x300 and 600x600 floor tiles; SAP also has a 300x600 wall tile).
+    if (!sized.length && sizeKey && sapByName) {
+      const sapSized = [...new Map((sapByName.get(dKey) ?? []).map((c) => [c.code, c])).values()].filter((c) => c.sizeKey === sizeKey);
+      const one = sapSized.length === 1 ? sapSized[0] : onePackagingFamily(sapSized);
+      if (one) return { materialCode: one.code, materialName: one.name, method: "sap_name_and_size", confidence: 0.85, status: "auto", candidates: [] };
+    }
     return { materialCode: null, materialName: null, method: "ambiguous", confidence: 0, status: "needs_review", candidates: (sized.length ? sized : codes).slice(0, 5) };
   }
   // Tier 2: SAP material descriptions (older / discontinued designs not in RMI's catalogue).
