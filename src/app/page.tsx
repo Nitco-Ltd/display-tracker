@@ -7,6 +7,7 @@ import { Insight, PageHeader } from "@/components/PageHeader";
 import { Tabs } from "@/components/Tabs";
 import { filterOptions, loadRows, type SearchParams } from "@/analytics/data";
 import { ALL_OFFSETS, beforeAfter, currentMonth, kpis, monthlyTrend, offsetLabel } from "@/analytics/metrics";
+import { addMonths } from "@/sales/window";
 import { inr, inrCompact, m2, monthName, num, pct } from "@/lib/format";
 
 const MIN_N = 200; // fewer displays than this in a month-after point: drawn hollow (less reliable)
@@ -26,6 +27,8 @@ export default async function Overview({ searchParams }: { searchParams: Promise
   const afterAvg = after3.length ? after3.reduce((a, p) => a + p.avgValue, 0) / after3.length : NaN;
   const change = Number.isFinite(before) && before > 0 && Number.isFinite(afterAvg) ? afterAvg / before - 1 : NaN;
   const direction = !Number.isFinite(change) ? null : change > 0.05 ? "rose" : change < -0.05 ? "fell" : "stayed about the same";
+  const nearlyNothing = Number.isFinite(afterAvg) && Number.isFinite(before) && before > 0 && afterAvg <= before * 0.05;
+  const inProgress = after3.some((p) => p.offset >= 1) && rows.some((r) => r.cohortMonth && r.cohortMonth >= addMonths(cur, -3) && r.cohortMonth < cur);
 
   return (
     <>
@@ -50,9 +53,19 @@ export default async function Overview({ searchParams }: { searchParams: Promise
 
       {direction && (
         <Insight>
-          A dealer bought <b>{inr(before)}</b> of a displayed tile in the month before it went on display, and <b>{inr(afterAvg)}</b> a month on average in the
-          three months after: sales <b>{direction}</b>
-          {direction !== "stayed about the same" ? ` (${change > 0 ? "+" : ""}${pct(change)})` : ""}. Averages per display, same dealer and same tile.
+          A dealer bought <b>{inr(before)}</b> of a displayed tile in the month before it went on display
+          {nearlyNothing ? (
+            <>
+              , and <b>almost nothing</b> in the three months after ({inr(afterAvg)} a month on average, returns and credit notes included).
+            </>
+          ) : (
+            <>
+              , and <b>{inr(afterAvg)}</b> a month on average in the three months after: sales <b>{direction}</b>
+              {direction !== "stayed about the same" ? ` (${change > 0 ? "+" : ""}${pct(change)})` : ""}.
+            </>
+          )}{" "}
+          Averages per display, same dealer and same tile.
+          {inProgress ? ` ${monthName(cur)} is still in progress, so its numbers will grow.` : ""}
         </Insight>
       )}
 
