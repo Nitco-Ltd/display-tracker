@@ -1,6 +1,6 @@
 // Shown instantly while a page's data is prepared, so switching pages never looks frozen.
 export default function Loading() {
-  const block = "rounded-[10px] bg-[var(--surface-1)] border border-line animate-pulse";
+  const block = "rounded-[14px] bg-[var(--surface-1)] border border-line animate-pulse";
   return (
     <div aria-busy="true" aria-label="Loading">
       <div className="h-6 w-72 rounded bg-[var(--gridline)] animate-pulse mb-2" />

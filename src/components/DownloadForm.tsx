@@ -24,7 +24,7 @@ export function DownloadForm({ options, initialMonth }: { options: FilterOptions
   };
 
   return (
-    <div className="card p-4">
+    <div className="card p-5">
       <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <MultiSelect single label="Display Month & Year *" options={options.months.map((m) => ({ value: m, label: monthLabel(m) }))} selected={v.month ?? []} onChange={set("month")} />
         <MultiSelect label="Zone" options={o(options.zones)} selected={v.zone ?? []} onChange={set("zone")} />
@@ -44,7 +44,7 @@ export function DownloadForm({ options, initialMonth }: { options: FilterOptions
           onChange={(vals) => set("extra")(vals.includes("1") ? ["1"] : [])}
         />
         <div className="flex items-end">
-          <button onClick={download} className="w-full rounded-md px-4 py-2 text-[13px] font-medium bg-accent text-white">
+          <button onClick={download} className="btn btn-primary w-full h-[47px]">
             Download Excel
           </button>
         </div>

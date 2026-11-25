@@ -19,7 +19,7 @@ export function Nav() {
   const sp = useSearchParams();
   const qs = sp.toString();
   return (
-    <nav className="flex flex-wrap gap-1 text-[13px]">
+    <nav className="flex flex-wrap gap-0.5 text-[13px]" aria-label="Pages">
       {LINKS.map((l) => {
         const active = l.href === "/" ? path === "/" : path.startsWith(l.href);
         const href = SHARES_FILTERS.has(l.href) && SHARES_FILTERS.has(path) && qs ? `${l.href}?${qs}` : l.href;
@@ -27,7 +27,10 @@ export function Nav() {
           <Link
             key={l.href}
             href={href}
-            className={`px-3 py-1.5 rounded-md ${active ? "bg-surface-0 text-ink font-semibold" : "text-ink-2 hover:text-ink hover:bg-surface-0"}`}
+            aria-current={active ? "page" : undefined}
+            className={`px-3 py-1.5 rounded-full transition-colors ${
+              active ? "bg-[var(--accent-soft)] text-accent font-semibold" : "text-ink-2 hover:text-ink hover:bg-surface-2"
+            }`}
           >
             {l.label}
           </Link>

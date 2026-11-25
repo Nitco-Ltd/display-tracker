@@ -37,7 +37,7 @@ export default async function Displays({ searchParams }: { searchParams: Promise
         title={`Displays (${num(rows.length)})`}
         note={<>All report columns plus a sales summary. {cohortNote(rows)}. “After” = M+1 onwards, months so far. Avg value = sum of the 14-month window ÷ 14 (report rule).</>}
         action={
-          <a href={`/api/export?${qs(filtersOnly)}`} className="rounded-md px-3 py-1.5 text-[13px] font-medium bg-accent text-white">
+          <a href={`/api/export?${qs(filtersOnly)}`} className="btn btn-primary">
             Export to Excel
           </a>
         }

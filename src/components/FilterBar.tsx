@@ -80,25 +80,24 @@ export function FilterBar({
   );
 
   return (
-    <div className={`card p-3 mb-4 transition-opacity ${pending ? "opacity-60" : ""}`} aria-busy={pending}>
+    <div className={`card p-3.5 mb-5 transition-opacity ${pending ? "opacity-60" : ""}`} aria-busy={pending}>
       <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 items-end">
         {primary.map(field)}
         <div className="flex gap-2 items-end">
           {more.length > 0 && (
-            <button
-              onClick={() => setOpen((x) => !x)}
-              className="h-[46px] flex-1 rounded-md border border-line px-3 text-[13px] text-ink-2 hover:bg-surface-0 whitespace-nowrap"
-              aria-expanded={open}
-            >
+            <button onClick={() => setOpen((x) => !x)} className="btn btn-ghost h-[47px] flex-1 border border-dashed !border-[var(--border-strong)]" aria-expanded={open}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <path d="M3 6h18M7 12h10M10 18h4" />
+              </svg>
               {open ? "Fewer filters" : `More filters${moreActive ? ` (${moreActive})` : ""}`}
             </button>
           )}
         </div>
       </div>
       {open && more.length > 0 && <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mt-2">{more.map(field)}</div>}
-      <div className="flex flex-wrap items-center gap-2 mt-2.5">
+      <div className="flex flex-wrap items-center gap-2 mt-3">
         {showSales && (
-          <div className="inline-flex rounded-md border border-line overflow-hidden text-[12px]" role="group" aria-label="Which invoices count as sales">
+          <div className="seg" role="group" aria-label="Which invoices count as sales">
             {[
               ["", "Standard sales"],
               ["incl", "+ ZTDN, ZNTI, ZDMS"],
@@ -107,7 +106,6 @@ export function FilterBar({
                 key={v}
                 onClick={() => set("sales", v ? [v] : [])}
                 aria-pressed={incl === !!v}
-                className={`px-2.5 py-1 ${incl === !!v ? "bg-[var(--accent)] text-white" : "text-ink-2 hover:bg-surface-0"}`}
                 title={v ? "Also count debit notes (ZTDN), ZNTI and samples (ZDMS)" : "SAP invoices minus returns and credit notes, as in the Sales data MIS"}
               >
                 {l}
@@ -119,14 +117,14 @@ export function FilterBar({
           <button
             key={`${c.p}|${c.v}`}
             onClick={() => removeOne(c.p, c.v)}
-            className="rounded-full border border-line bg-surface-0 px-2.5 py-0.5 text-[12px] text-ink-2 hover:border-[var(--accent)]"
+            className="chip"
             title="Remove this filter"
           >
             {c.text} <span aria-hidden>×</span>
           </button>
         ))}
         {chips.length > 0 && (
-          <button onClick={() => start(() => router.push(path))} className="text-[12px] text-accent ml-1">
+          <button onClick={() => start(() => router.push(path))} className="text-[12px] font-medium text-accent ml-1 hover:underline">
             Clear all
           </button>
         )}

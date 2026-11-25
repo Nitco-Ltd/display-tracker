@@ -39,7 +39,7 @@ export default async function ZeroSales({ searchParams }: { searchParams: Promis
         title={`${num(list.length)} displays with no purchase in the ${n} month${n > 1 ? "s" : ""} after display`}
         note={`Only displays old enough to have had ${n} full month${n > 1 ? "s" : ""} after the display month, and whose tile is matched to SAP. Displays with a blank or unknown design aren't listed.`}
         action={
-          <a href={`/api/export?${qs.toString()}`} className="rounded-md px-3 py-1.5 text-[13px] font-medium bg-accent text-white">
+          <a href={`/api/export?${qs.toString()}`} className="btn btn-primary">
             Export to Excel
           </a>
         }

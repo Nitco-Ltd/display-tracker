@@ -265,10 +265,10 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
             {r.monthDealers ? <> (out of {inr(r.monthDealers)} they bought in all)</> : null}. This is the {monthName(month)} column of the {monthName(month)} Display
             Tracker Report.
           </div>
-          <Link href={displaysHref} className="whitespace-nowrap rounded-md px-3 py-1.5 text-[13px] border border-line bg-[var(--surface-1)]">
+          <Link href={displaysHref} className="btn">
             See these displays
           </Link>
-          <Link href={reportHref} className="whitespace-nowrap rounded-md px-3 py-1.5 text-[13px] font-medium bg-accent text-white">
+          <Link href={reportHref} className="btn btn-primary">
             Download report
           </Link>
         </div>

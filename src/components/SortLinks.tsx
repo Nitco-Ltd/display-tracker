@@ -8,7 +8,7 @@ export function ParamLinks({ param, options, fallback }: { param: string; option
   const sp = useSearchParams();
   const current = sp.get(param) ?? fallback;
   return (
-    <div className="inline-flex rounded-md border border-line overflow-hidden text-[12px]">
+    <div className="seg">
       {options.map((o) => {
         const next = new URLSearchParams(sp.toString());
         next.set(param, o.value);
@@ -18,7 +18,7 @@ export function ParamLinks({ param, options, fallback }: { param: string; option
             key={o.value}
             href={`${path}?${next.toString()}`}
             scroll={false}
-            className={`px-2.5 py-1 ${current === o.value ? "bg-accent text-white" : "bg-surface-1 text-ink-2 hover:text-ink"}`}
+            data-active={current === o.value}
           >
             {o.label}
           </Link>

@@ -27,10 +27,15 @@ export async function FreshnessBanner({ compact = false }: { compact?: boolean }
   }
 
   if (compact) {
+    const latest = [rmi.lastOk?.finishedAt, sap.lastOk?.finishedAt].filter(Boolean).sort()[0];
+    const ok = !problems.length;
     return (
-      <div className="text-[12px] text-ink-3 text-right leading-tight">
-        <div>RMI synced {when(rmi.lastOk?.finishedAt)}</div>
-        <div>SAP synced {when(sap.lastOk?.finishedAt)}</div>
+      <div
+        className="hidden md:flex items-center gap-2 rounded-full border border-line bg-surface-2 px-3 py-1 text-[12px] text-ink-2"
+        title={`RMI synced ${when(rmi.lastOk?.finishedAt)} · SAP synced ${when(sap.lastOk?.finishedAt)}`}
+      >
+        <span className="h-2 w-2 rounded-full" style={{ background: ok ? "var(--status-good)" : "var(--status-warning)" }} aria-hidden />
+        {ok ? `Data as of ${when(latest)}` : "Data needs attention"}
       </div>
     );
   }
