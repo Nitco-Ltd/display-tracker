@@ -5,8 +5,8 @@ import { usePathname, useSearchParams } from "next/navigation";
 const LINKS = [
   { href: "/", label: "Overview" },
   { href: "/monthly", label: "Monthly sales" },
-  { href: "/leaderboards", label: "Leaderboards" },
-  { href: "/zero-sales", label: "Zero sales" },
+  { href: "/leaderboards", label: "Rankings" },
+  { href: "/zero-sales", label: "Follow-up" },
   { href: "/displays", label: "Displays" },
   { href: "/download", label: "Download report" },
 ];

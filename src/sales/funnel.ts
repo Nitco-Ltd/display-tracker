@@ -9,9 +9,10 @@
 // Area = the customer's SAP sales district (zone) and sales office (region), named the way RMI names them
 // (EZ1 → "East Zone 1", BH1/BH2/BHC → "Bihar"; learnt from the RMI dealers in each office).
 // A dealer's linked accounts (same GST + PIN, see dealers.ts) and a design's packaging variants count as one.
-import { eq, lte } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getDb, tables } from "@/db/client";
-import { displaysWithSales, type DisplayWithSales } from "./window";
+import { cached } from "@/lib/datacache";
+import { allDisplaysWithSales, type DisplayWithSales } from "./window";
 
 export interface Geo {
   zone: string;
@@ -97,8 +98,8 @@ export async function salesFunnel(month: string, f: FunnelFilter = {}, opts: { i
   const t = tables();
   const db = getDb();
   const extra = !!opts.includeExtra;
-  const geo = await customerGeo();
-  const displays = (opts.displays ?? (await displaysWithSales(lte(t.rmiDisplay.cohortMonth, month)))).filter(
+  const geo = await cached("customerGeo", customerGeo);
+  const displays = (opts.displays ?? (await allDisplaysWithSales())).filter(
     (r) => r.cohortMonth && r.cohortMonth <= month && r.dealerCode,
   );
 
@@ -141,7 +142,10 @@ export async function salesFunnel(month: string, f: FunnelFilter = {}, opts: { i
   for (const r of displays) for (const a of r.salesAccounts) groupOf.set(a, r.dealerGroup ?? a);
   const groupOfAcct = (a: string) => groupOf.get(a) ?? a;
   const res: FunnelResult = { month, ...empty(), byRegion: [], tilesNotOnDisplay: [], tilesOnDisplay: [] };
-  const desc = new Map((await db.select({ m: t.sapMaterial.material, d: t.sapMaterial.description }).from(t.sapMaterial)).map((x) => [x.m, x.d ?? x.m]));
+  const desc = await cached(
+    "materialNames",
+    async () => new Map((await db.select({ m: t.sapMaterial.material, d: t.sapMaterial.description }).from(t.sapMaterial)).map((x) => [x.m, x.d ?? x.m])),
+  );
   const tileAcc = { on: new Map<string, { v: number; d: Set<string> }>(), off: new Map<string, { v: number; d: Set<string> }>() };
   const tileKey = (code: string) => `${desc.get(code) ?? code}|${code.match(/(\d{3,4})X(\d{3,4})/i)?.slice(1).join("x") ?? ""}`;
   const addTile = (which: "on" | "off", code: string, dealer: string, v: number) => {
@@ -164,7 +168,8 @@ export async function salesFunnel(month: string, f: FunnelFilter = {}, opts: { i
   // Steps 1, 2, 4: all tile sales per customer.
   const custDealers = new Set<string>();
   const monthDealers = new Set<string>();
-  for (const s of await db.select().from(t.sapCustomerMonthly).where(eq(t.sapCustomerMonthly.month, month))) {
+  const custMonth = await cached(`customerMonthly|${month}`, () => db.select().from(t.sapCustomerMonthly).where(eq(t.sapCustomerMonthly.month, month)));
+  for (const s of custMonth) {
     if (!inScope(s.customer)) continue;
     const v = s.value + (extra ? s.extraValue : 0);
     add("total", s.customer, v);
@@ -179,7 +184,8 @@ export async function salesFunnel(month: string, f: FunnelFilter = {}, opts: { i
     }
   }
   // Steps 3, 5: the displayed designs, per dealer account.
-  for (const s of await db.select().from(t.sapSalesMonthly).where(eq(t.sapSalesMonthly.month, month))) {
+  const salesMonth = await cached(`salesMonthly|${month}`, () => db.select().from(t.sapSalesMonthly).where(eq(t.sapSalesMonthly.month, month)));
+  for (const s of salesMonth) {
     if (!inScope(s.dealerCode)) continue;
     const k = `${s.dealerCode}|${s.materialCode}`;
     const v = s.value + (extra ? s.extraValue : 0);

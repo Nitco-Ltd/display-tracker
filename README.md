@@ -101,9 +101,9 @@ The **filters** at the top (display month, zone, region, RMI, dealer, dealer typ
 
 | Page | What it's for |
 |---|---|
-| **Overview** | Key numbers, **before vs after display** (the main "did displays work?" view), displays per month and the sales that followed. "How these numbers are calculated" is at the bottom. |
-| **Leaderboards** | Zones, RMIs, dealers and designs ranked by sales after display or by conversion rate. |
-| **Zero sales** | Follow-up list: displays with no sales within 1/2/3/6/12 months. Export to Excel. |
+| **Overview** | "Do displays lead to sales?": key numbers, a one-line takeaway, the displayed tile's sales month by month from the month before display to 12 months after, and displays / sales / purchase rate by the month the display was put up. |
+| **Rankings** | Zones, RMIs, dealers and tiles (one tab each) ranked by sales after display or by how often the dealer bought the tile afterwards. |
+| **Follow-up** | Displays with no purchase within 1/2/3/6/12 months. Export to Excel. |
 | **Monthly sales** | Pick a sales month and an area: all tile sales there (same as the Sales data MIS), how much went to dealers with displays, and how much was a dealer buying a tile it displays; plus the displays put up that month. By region. |
 | **Displays** | Every display with all report columns and a sales summary. **Export to Excel** exports exactly what's filtered. |
 | **Download report** | The monthly report, like RMI's own report page: pick a month and optional filters, then **Download Excel**. |

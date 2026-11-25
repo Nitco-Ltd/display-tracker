@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { FilterBar } from "@/components/FilterBar";
 import { Section } from "@/components/Kpi";
+import { PageHeader } from "@/components/PageHeader";
 import { DisplayTable, cohortNote } from "@/components/DisplayTable";
 import { filterOptions, loadRows, type SearchParams } from "@/analytics/data";
 import { num } from "@/lib/format";
@@ -25,6 +26,10 @@ export default async function Displays({ searchParams }: { searchParams: Promise
 
   return (
     <>
+      <PageHeader
+        title="All displays"
+        description="Every display recorded in the RMI app, with the dealer's purchases of that tile from SAP: the month before, the display month, and the months after."
+      />
       <Suspense>
         <FilterBar options={options} />
       </Suspense>

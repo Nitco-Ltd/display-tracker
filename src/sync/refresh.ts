@@ -5,6 +5,7 @@ import { syncSap } from "./sap-sync";
 import { rebuildDesignMap } from "./design-match";
 import { openCohorts, writeReports } from "@/report/generate";
 import { publishToCloud } from "./publish";
+import { invalidateDataCache } from "@/lib/datacache";
 
 let running: Promise<string> | null = null;
 
@@ -44,6 +45,7 @@ export function refreshAll(): Promise<string> {
       } catch (e) {
         errors.push(`Publish: ${(e as Error).message}`);
       }
+      invalidateDataCache(); // the dashboard in this process shows the new data straight away
       if (errors.length) throw new Error(errors.join(" | "));
       return parts.join(", ");
     })().finally(() => {

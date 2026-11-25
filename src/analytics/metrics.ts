@@ -131,9 +131,9 @@ export interface BeforeAfterPoint {
 }
 
 /** Average sales per display pair in the month before vs. selected months after (same dealer + design). */
-export function beforeAfter(rows: DisplayWithSales[], cur = currentMonth()): BeforeAfterPoint[] {
+export function beforeAfter(rows: DisplayWithSales[], cur = currentMonth(), offsets: number[] = [-1, 0, ...AFTER_OFFSETS]): BeforeAfterPoint[] {
   const pairs = uniquePairs(rows).filter(isLinked);
-  return [-1, 0, ...AFTER_OFFSETS].map((offset) => {
+  return offsets.map((offset) => {
     const vals = pairs.map((r) => at(r, offset, cur)).filter((s): s is NonNullable<typeof s> => !!s);
     const n = vals.length;
     return {
@@ -220,4 +220,14 @@ export function rowSummary(r: DisplayWithSales, cur = currentMonth()) {
     afterVolume: after.reduce((a, s) => a + s.volume, 0),
     afterMonths: after.length,
   };
+}
+
+/** Every month from the one before display to 12 after: -1, 0, 1 … 12. */
+export const ALL_OFFSETS = Array.from({ length: 14 }, (_, i) => i - 1);
+
+/** Plain label for a month relative to display: "Month before", "Display month", "+1" … */
+export function offsetLabel(offset: number, long = false): string {
+  if (offset === -1) return long ? "The month before display" : "Before";
+  if (offset === 0) return long ? "The display month" : "Display";
+  return long ? `${offset} month${offset > 1 ? "s" : ""} after display` : `+${offset}`;
 }

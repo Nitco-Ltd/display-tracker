@@ -1,11 +1,13 @@
 // Loads display rows (with SAP sales) for the dashboard, applying URL filters and the viewer's scope.
+// All rows are loaded once per data version (src/lib/datacache.ts) and filtered in memory, so switching pages
+// or filters doesn't go back to the database.
 import "server-only";
-import { asc, isNotNull } from "drizzle-orm";
-import { getDb, tables } from "@/db/client";
-import { ensureSchema } from "@/db/migrate";
 import { requireViewer, scopeFilter } from "@/auth/viewer";
-import { filterWhere, type ReportFilter } from "@/report/filters";
-import { displaysWithSales } from "@/sales/window";
+import { ensureSchema } from "@/db/migrate";
+import { cached } from "@/lib/datacache";
+import { currentMonth } from "@/analytics/metrics";
+import type { ReportFilter } from "@/report/filters";
+import { allDisplaysWithSales, matchesFilter, type DisplayWithSales } from "@/sales/window";
 
 export type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -34,12 +36,15 @@ export function parseFilter(sp: SearchParams): ReportFilter {
   return f;
 }
 
-export async function loadRows(sp: SearchParams) {
+export const includeExtraFrom = (sp: SearchParams) => [sp.sales].flat().includes("incl");
+
+export async function loadRows(sp: SearchParams): Promise<DisplayWithSales[]> {
   await ensureSchema();
   const viewer = await requireViewer();
   const filter = scopeFilter(viewer, parseFilter(sp));
   // ?sales=incl -> also count ZTDN, ZNTI, ZDMS invoices (not decided yet whether they are sales).
-  return displaysWithSales(filterWhere(filter), { includeExtra: [sp.sales].flat().includes("incl") });
+  const all = await allDisplaysWithSales({ includeExtra: includeExtraFrom(sp) });
+  return all.filter((r) => matchesFilter(r, filter));
 }
 
 export interface FilterOptions {
@@ -59,43 +64,30 @@ export interface FilterOptions {
 export async function filterOptions(): Promise<FilterOptions> {
   await ensureSchema();
   const viewer = await requireViewer();
-  const t = tables().rmiDisplay;
-  const rows = await getDb()
-    .select({
-      month: t.cohortMonth,
-      zone: t.zone,
-      region: t.region,
-      rmi: t.rmiName,
-      dealer: t.dealerCode,
-      dealerName: t.dealerName,
-      dtype: t.dealerCategory,
-      ptype: t.productTypeNorm,
-      size: t.sizeMmNorm,
-      design: t.designName,
-      dstatus: t.designStatus,
-      where: t.displayedWhereNorm,
-    })
-    .from(t)
-    .where(filterWhere(scopeFilter(viewer, {})) ?? isNotNull(t.refNo))
-    .orderBy(asc(t.cohortMonth));
-  const uniq = (f: (r: (typeof rows)[number]) => string | null) =>
-    [...new Set(rows.map(f).filter((x): x is string => !!x))].sort((a, b) => a.localeCompare(b));
-  const dealers = new Map<string, string>();
-  for (const r of rows) if (r.dealer) dealers.set(r.dealer, r.dealerName ?? r.dealer);
-  return {
-    // Future months only come from typos in RMI's display date (e.g. SZ1/KT/4 dated 05 Feb 2029): not offered.
-    months: uniq((r) => r.month)
-      .filter((m) => m <= new Date().toISOString().slice(0, 7))
-      .reverse(),
-    zones: uniq((r) => r.zone),
-    regions: uniq((r) => r.region),
-    rmis: uniq((r) => r.rmi),
-    dealers: [...dealers.entries()].map(([code, name]) => ({ code, name })).sort((a, b) => a.name.localeCompare(b.name)),
-    dtypes: uniq((r) => r.dtype),
-    ptypes: uniq((r) => r.ptype),
-    sizes: uniq((r) => r.size),
-    designs: uniq((r) => r.design),
-    dstatuses: uniq((r) => r.dstatus),
-    wheres: uniq((r) => r.where),
-  };
+  const scope = scopeFilter(viewer, {});
+  const key = `filteroptions|${JSON.stringify(scope)}`;
+  return cached(key, async () => {
+    const rows = (await allDisplaysWithSales({ includeExtra: false })).filter((r) => matchesFilter(r, scope));
+    const uniq = (f: (r: DisplayWithSales) => string | null) =>
+      [...new Set(rows.map(f).filter((x): x is string => !!x))].sort((a, b) => a.localeCompare(b));
+    const dealers = new Map<string, string>();
+    for (const r of rows) if (r.dealerCode) dealers.set(r.dealerCode, r.dealerName ?? r.dealerCode);
+    const cur = currentMonth();
+    return {
+      // Future months only come from typos in RMI's display date (e.g. SZ1/KT/4 dated 05 Feb 2029): not offered.
+      months: uniq((r) => r.cohortMonth)
+        .filter((m) => m <= cur)
+        .reverse(),
+      zones: uniq((r) => r.zone),
+      regions: uniq((r) => r.region),
+      rmis: uniq((r) => r.rmiName),
+      dealers: [...dealers.entries()].map(([code, name]) => ({ code, name })).sort((a, b) => a.name.localeCompare(b.name)),
+      dtypes: uniq((r) => r.dealerCategory),
+      ptypes: uniq((r) => r.productTypeNorm),
+      sizes: uniq((r) => r.sizeMmNorm),
+      designs: uniq((r) => r.designName),
+      dstatuses: uniq((r) => r.designStatus),
+      wheres: uniq((r) => r.displayedWhereNorm),
+    };
+  });
 }

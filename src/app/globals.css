@@ -13,7 +13,10 @@
   --accent-ink: #ffffff;
   --series-1: #2a78d6;
   --series-1-soft: #86b6ef;
+  --series-2: #eb6834; /* categorical slots 2–3 (dataviz reference palette, validated all-pairs with slot 1) */
+  --series-3: #1baf7a;
   --gridline: #ebeae6;
+  --axis: #c9c8c1;
   --status-good: #0ca30c;
   --status-good-text: #006300;
   --status-warning: #fab219;
@@ -35,7 +38,10 @@
     --accent-ink: #ffffff;
     --series-1: #3987e5;
     --series-1-soft: #256abf;
+    --series-2: #d95926;
+    --series-3: #199e70;
     --gridline: #2a2a27;
+    --axis: #4a4945;
     --status-good: #0ca30c;
     --status-good-text: #5fd35f;
     --status-warning: #fab219;

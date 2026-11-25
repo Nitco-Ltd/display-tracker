@@ -2,8 +2,8 @@
 // one sheet "Report" holding one Excel table "Report", columns A–AY, one row per display, in RMI record order.
 // Differences from RMI's file, by design: real numbers and dates (not text), frozen header, widths, number formats.
 import ExcelJS from "exceljs";
-import { displaysWithSales, monthLabel, MONTH_ABBR, WINDOW_MONTHS, windowMonths, type DisplayWithSales, type SalesOptions } from "@/sales/window";
-import { filterWhere, type ReportFilter } from "./filters";
+import { allDisplaysWithSales, matchesFilter, monthLabel, MONTH_ABBR, WINDOW_MONTHS, windowMonths, type DisplayWithSales, type SalesOptions } from "@/sales/window";
+import type { ReportFilter } from "./filters";
 import { salesFunnel, type FunnelResult } from "@/sales/funnel";
 
 /** Columns A–U, in order, with the field that feeds each (original RMI values, not normalized). */
@@ -134,7 +134,8 @@ export function buildWorkbook(cohort: string | null, rows: DisplayWithSales[], u
 
 /** Rows for a cohort month (plus optional extra filters), in RMI record order. */
 export async function reportRows(cohort: string, filter: ReportFilter = {}, opts: SalesOptions = {}): Promise<DisplayWithSales[]> {
-  return displaysWithSales(filterWhere({ ...filter, cohortMonths: [cohort] }), opts);
+  const f = { ...filter, cohortMonths: [cohort] };
+  return (await allDisplaysWithSales(opts)).filter((r) => matchesFilter(r, f));
 }
 
 export async function buildReportBuffer(

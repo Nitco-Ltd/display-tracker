@@ -2,6 +2,8 @@
 // month −1 (before display) … month +12 after the display month = 14 months.
 import { and, asc, eq, inArray, type SQL } from "drizzle-orm";
 import { getDb, tables } from "@/db/client";
+import { cached } from "@/lib/datacache";
+import type { ReportFilter } from "@/report/filters";
 import { linkedAccounts } from "./dealers";
 import { packagingFamilyKey } from "./packaging";
 
@@ -11,9 +13,11 @@ export const WINDOW_MONTHS = WINDOW_BEFORE + 1 + WINDOW_AFTER; // 14
 
 /** "2026-08" + n months -> "yyyy-mm" */
 export function addMonths(ym: string, n: number): string {
-  const [y, m] = ym.split("-").map(Number);
-  const d = new Date(Date.UTC(y, m - 1 + n, 1));
-  return d.toISOString().slice(0, 7);
+  // Plain arithmetic (no Date objects): this runs millions of times when the dashboard computes rankings.
+  const total = Number(ym.slice(0, 4)) * 12 + Number(ym.slice(5, 7)) - 1 + n;
+  const y = Math.floor(total / 12);
+  const m = total - y * 12 + 1;
+  return `${y}-${m < 10 ? "0" : ""}${m}`;
 }
 
 /** ["2026-07", "2026-08", … "2027-08"] for cohort 2026-08 */
@@ -83,6 +87,29 @@ export async function packagingFamilies(): Promise<{ familyOf: Map<string, strin
 export interface SalesOptions {
   /** Also count the undecided invoice types ZTDN, ZNTI, ZDMS (SAP_EXTRA_*). Default: no. */
   includeExtra?: boolean;
+}
+
+/** Every display with its sales, loaded once per data version (see src/lib/datacache.ts). Don't mutate the rows. */
+export function allDisplaysWithSales(opts: SalesOptions = {}): Promise<DisplayWithSales[]> {
+  return cached(`displays|${opts.includeExtra ? "incl" : "std"}`, () => displaysWithSales(undefined, opts));
+}
+
+/** In-memory version of filterWhere (src/report/filters.ts): same fields, same meaning. */
+export function matchesFilter(r: DisplayRow, f: ReportFilter): boolean {
+  const ok = (vals: string[] | undefined, v: string | null) => !vals?.length || (v !== null && vals.includes(v));
+  return (
+    ok(f.cohortMonths, r.cohortMonth) &&
+    ok(f.zones, r.zone) &&
+    ok(f.regions, r.region) &&
+    ok(f.rmiNames, r.rmiName) &&
+    ok(f.dealerCodes, r.dealerCode) &&
+    ok(f.dealerCategories, r.dealerCategory) &&
+    ok(f.productTypes, r.productTypeNorm) &&
+    ok(f.sizes, r.sizeMmNorm) &&
+    ok(f.designNames, r.designName) &&
+    ok(f.designStatuses, r.designStatus) &&
+    ok(f.displayedWhere, r.displayedWhereNorm)
+  );
 }
 
 export async function displaysWithSales(where?: SQL, opts: SalesOptions = {}): Promise<DisplayWithSales[]> {
