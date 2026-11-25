@@ -180,6 +180,6 @@ display). A blank RMI size with exactly one SAP product of that name is linked t
 of RMI dealers per office, e.g. BH1/BH2/BHC → Bihar). All tile sales (division 02, `SAP_TILE_DIVISIONS`) per customer and month
 are kept in `sap_customer_monthly`. Aug-2026: Bihar ₹3,61,78,359, Orissa ₹2,00,13,227, Jharkhand ₹37,27,319, East Zone 1
 ₹5,99,18,906 — identical to the MIS file once ZCQC is excluded (the file has no ZCQC lines; ZCQC was the only difference).
-Steps shown on the page and in the report's Summary sheet: 1 all tile sales · 2 to dealers with a display (put up by that
-month) · 3 of tiles that dealer has on display · 4 everything bought by dealers who got a display that month · 5 of the tiles
-displayed that month (= the report's display-month column). Implemented in `src/sales/funnel.ts`.
+Shown on the page and in the report's Summary sheet as a tree: all sales → dealers without a display / dealers with a
+display → …other tiles / …tiles on display at their shop; plus the month's new displays and how much of the newly displayed
+tiles they bought (= the report's display-month column). Implemented in `src/sales/funnel.ts`.
