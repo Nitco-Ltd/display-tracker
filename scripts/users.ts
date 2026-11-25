@@ -6,7 +6,8 @@
 //   add    <email> "<Name>" zonal "<Zone as in RMI>"        e.g. "East Zone 1"
 //   add    <email> "<Name>" rmi   "<RMI name as in RMI>"    e.g. "Samrat Dutta"
 //   import <file.csv>        columns: email,name,role,scope   (scope = zone or RMI name; blank for admin)
-//   reset  <email>           new password
+//   reset  <email>           new random password (copied to the clipboard)
+//   set-password <email>     type a password you choose (asked on the keyboard)
 //   disable <email> | enable <email>
 //
 // New passwords are printed once. Give each person their own; they are stored only as hashes.
@@ -100,6 +101,17 @@ async function main() {
     const password = generatePassword();
     const r = await db.update(t.appUser).set({ passwordHash: hashPassword(password), updatedAt: new Date().toISOString() }).where(eq(t.appUser.email, a[0].toLowerCase())).returning({ e: t.appUser.email });
     console.log(r.length ? `${a[0]}\tnew ${showPassword(a[0], password)}` : `No user ${a[0]}`);
+    return;
+  }
+  if (cmd === "set-password") {
+    // Asks for the password on the keyboard, so it never lands in shell history, logs or chat.
+    const { createInterface } = await import("node:readline/promises");
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    const pw = (await rl.question(`New password for ${a[0]}: `)).trim();
+    rl.close();
+    if (pw.length < 8) throw new Error("Use at least 8 characters");
+    const r = await db.update(t.appUser).set({ passwordHash: hashPassword(pw), updatedAt: new Date().toISOString() }).where(eq(t.appUser.email, a[0].toLowerCase())).returning({ e: t.appUser.email });
+    console.log(r.length ? `${a[0]}: password set (run npm run publish to apply it on the website)` : `No user ${a[0]}`);
     return;
   }
   if (cmd === "disable" || cmd === "enable") {
