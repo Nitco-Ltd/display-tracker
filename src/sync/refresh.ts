@@ -4,6 +4,7 @@ import { syncRmi } from "./rmi-sync";
 import { syncSap } from "./sap-sync";
 import { rebuildDesignMap } from "./design-match";
 import { openCohorts, writeReports } from "@/report/generate";
+import { publishToCloud } from "./publish";
 
 let running: Promise<string> | null = null;
 
@@ -35,6 +36,13 @@ export function refreshAll(): Promise<string> {
         parts.push(`${w.length} reports`);
       } catch (e) {
         errors.push(`Reports: ${(e as Error).message}`);
+      }
+      try {
+        // Copy the dashboard tables to the cloud database (Vercel dashboard), if PUBLISH_DATABASE_URL is set.
+        const p = await publishToCloud();
+        if (!p.skipped) parts.push("published to cloud");
+      } catch (e) {
+        errors.push(`Publish: ${(e as Error).message}`);
       }
       if (errors.length) throw new Error(errors.join(" | "));
       return parts.join(", ");

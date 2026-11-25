@@ -5,6 +5,7 @@ import { Nav } from "@/components/Nav";
 import { FreshnessBanner } from "@/components/FreshnessBanner";
 import { RefreshButton } from "@/components/RefreshButton";
 import { getViewer, canAdminister } from "@/auth/viewer";
+import { isReadOnly } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: "Display Tracker",
@@ -26,7 +27,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             </Suspense>
             <div className="ml-auto flex items-center gap-3">
               <FreshnessBanner compact />
-              {canAdminister(viewer) && <RefreshButton />}
+              {canAdminister(viewer) && !isReadOnly() && <RefreshButton />}
             </div>
           </div>
         </header>

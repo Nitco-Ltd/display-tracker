@@ -159,6 +159,8 @@ created 27 Aug 2026), GSTIN 10COSPP0792L1ZG, PIN 846004. SAP has no customer hie
 `A_CustSalesPartnerFunc`: only self-references). Implemented in `src/sales/dealers.ts`. Sales from the linked accounts are shown
 separately on the report's "How sales were matched" sheet. If the customer master can't be read, the sync logs a warning and
 sales are counted on the RMI dealer code only.
+Confirmed by the business owner (2026-11-25), including groups whose accounts trade under different names: Mahadev
+Marbles + Avni Tiles and Granite, Lima Haus + Mahalakshmi Tiles, I Key Home Studio + I Key Tile Gallery, Kiran Paint Sales.
 
 **Undecided invoice types ZNTI, ZDMS (samples), ZTDN (debit notes) (2026-11-25):** not counted in the standard numbers, but kept
 apart in `sap_sales_monthly.extra_volume` / `extra_value` (ZNTI, ZDMS: + quantity and value; ZTDN: + value only), set by

@@ -41,6 +41,12 @@ const schema = z.object({
   SAP_RECHECK_MONTHS: z.coerce.number().int().min(0).max(12).default(3),
   SAP_VOLUME_UNIT: z.string().default("M2"),
 
+  // Cloud dashboard (e.g. Vercel + Neon). On the sync PC: the Postgres URL the daily job copies the dashboard tables to
+  // (blank = don't publish). On Vercel: leave blank and set DATABASE_URL to the same Postgres, plus READ_ONLY=1.
+  PUBLISH_DATABASE_URL: z.string().optional(),
+  // Dashboard can't reach SAP/RMI (cloud host): hides "Refresh now" and blocks /api/refresh. Vercel sets VERCEL=1 itself.
+  READ_ONLY: bool,
+
   // Outputs
   REPORT_OUTPUT_DIR: z.string().default("./reports"),
   LOG_DIR: z.string().default("./logs"),
@@ -65,6 +71,11 @@ let cached: Config | undefined;
 export function config(): Config {
   if (!cached) cached = schema.parse(process.env);
   return cached;
+}
+
+/** True where the dashboard can't sync itself (cloud host). */
+export function isReadOnly(): boolean {
+  return config().READ_ONLY || process.env.VERCEL === "1";
 }
 
 export function csv(v: string): string[] {

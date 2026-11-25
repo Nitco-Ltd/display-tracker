@@ -5,7 +5,7 @@ import { sqliteTable, text, integer, real, primaryKey, index, uniqueIndex } from
 
 export const syncRuns = sqliteTable("sync_runs", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  source: text("source").notNull(), // rmi | sap | report
+  source: text("source").notNull(), // rmi | sap | report | publish
   startedAt: text("started_at").notNull(),
   finishedAt: text("finished_at"),
   status: text("status").notNull(), // running | ok | failed | skipped

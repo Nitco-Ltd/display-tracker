@@ -14,7 +14,7 @@ export interface RunHandle {
   fail(err: unknown): Promise<void>;
 }
 
-export async function startRun(source: "rmi" | "sap" | "report"): Promise<RunHandle> {
+export async function startRun(source: "rmi" | "sap" | "report" | "publish"): Promise<RunHandle> {
   const db = getDb();
   const t = tables();
   const [row] = await db
