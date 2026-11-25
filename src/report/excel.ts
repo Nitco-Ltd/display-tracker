@@ -181,17 +181,17 @@ export function addSummarySheet(wb: ExcelJS.Workbook, cohort: string, f: FunnelR
     r.getCell(3).numFmt = money;
     r.getCell(4).numFmt = "0.0%";
   };
-  head(`A. Where ${longMonth(cohort)}'s sales went`);
+  head(`A. Where ${longMonth(cohort)}'s sales went (each step is a smaller part of the one above; "on display" = displays put up this month or earlier)`);
   ws.addRow(["Step", "", "Value", "% of step 1"]).font = { bold: true };
-  line("1", "All tile sales to customers in this area", f.total);
-  line("2", "…to dealers who have an RMI display (put up by this month)", f.displayDealers, f.total ? f.displayDealers / f.total : undefined);
-  line("3", "…of tiles that dealer has on display", f.displayedDesigns, f.total ? f.displayedDesigns / f.total : undefined);
+  line("1", "All sales: every tile sold in this area this month, to every dealer", f.total);
+  line("2", "Sales to dealers who have a display: everything they bought, on display or not", f.displayDealers, f.total ? f.displayDealers / f.total : undefined);
+  line("3", "Sales of the tiles on display: only tiles on display at the same dealer who bought them", f.displayedDesigns, f.total ? f.displayedDesigns / f.total : undefined);
   ws.addRow([]);
   head(`B. Displays put up in ${longMonth(cohort)} (the Report sheet)`);
   ws.addRow(["", "Displays put up", f.monthDisplays]);
   ws.addRow(["", "Dealers", f.monthDealerCount]);
-  line("4", "Everything these dealers bought this month (all tiles)", f.monthDealers);
-  line("5", "…of the tiles displayed this month (= the Report sheet's " + monthLabel(cohort) + " Sales Value column)", f.monthDesigns, f.monthDealers ? f.monthDesigns / f.monthDealers : undefined);
+  line("4", "All sales to these dealers this month (any tile, on display or not)", f.monthDealers);
+  line("5", "Sales of the tiles put on display this month (= the Report sheet's " + monthLabel(cohort) + " Sales Value column)", f.monthDesigns, f.monthDealers ? f.monthDesigns / f.monthDealers : undefined);
   ws.addRow([]);
   head("C. The month columns in the Report sheet");
   const vis = visibleMonths(cohort, upTo);
@@ -208,7 +208,7 @@ export function addSummarySheet(wb: ExcelJS.Workbook, cohort: string, f: FunnelR
   }
   ws.addRow([]);
   head("D. By region");
-  const h = ws.addRow(["", "Zone · Region", "1 · All tile sales", "3 as % of 1", "2 · To display dealers", "3 · Displayed tiles", "Displays put up", "5 · Bought of those"]);
+  const h = ws.addRow(["", "Zone · Region", "1 · All sales", "3 as % of 1", "2 · To dealers with a display", "3 · Tiles on display", "Displays put up this month", "5 · Sales of those tiles"]);
   h.font = { bold: true };
   for (const x of f.byRegion) {
     const r = ws.addRow(["", `${x.zone} · ${x.region}`, x.total, x.total ? x.displayedDesigns / x.total : null, x.displayDealers, x.displayedDesigns, x.monthDisplays, x.monthDesigns]);

@@ -76,28 +76,35 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
         </h1>
         <p className="text-[14px] text-ink-2 mt-1">
           Dealers here bought <b>{inr(r.total)}</b> of tiles from NITCO in {monthName(month)}
-          {month === cur ? " (month so far)" : ""}. <b>{inrCompact(r.displayedDesigns)}</b> of that ({pct(r.total ? r.displayedDesigns / r.total : NaN)}) was a dealer buying a tile
-          it has on display.
+          {month === cur ? " (month so far)" : ""}. Of that, <b>{inrCompact(r.displayedDesigns)}</b> ({pct(r.total ? r.displayedDesigns / r.total : NaN)}) was dealers buying tiles they
+          have on display.
           {includeExtra ? " Includes ZTDN, ZNTI and ZDMS invoices." : ""}
         </p>
       </div>
 
       <Section
         title={`Where ${monthName(month)}'s sales went`}
-        note="Each step is part of the one above it. Sales are SAP invoices for tiles (net of returns and credit notes), the same as the Sales data MIS."
+        note="Each step is a smaller part of the step above it. Sales are SAP tile invoices minus returns and credit notes, the same as the Sales data MIS. “On display” means any display put up in this month or earlier."
       >
-        <StepBar n={1} label="All tile sales" help="Everything NITCO invoiced in this month to customers in this area." value={r.total} of={r.total} strong />
+        <StepBar
+          n={1}
+          label="All sales"
+          help="Every tile sold in this area this month, to every dealer."
+          value={r.total}
+          of={r.total}
+          strong
+        />
         <StepBar
           n={2}
-          label="…to dealers who have an RMI display"
-          help={`${num(r.displayDealerCount)} dealers with at least one display put up by ${monthName(month)}. The rest went to dealers without any display.`}
+          label="Sales to dealers who have a display"
+          help={`Everything bought by the ${num(r.displayDealerCount)} dealers who have at least one display, whether the tile is on display or not. Dealers without any display are left out.`}
           value={r.displayDealers}
           of={r.total}
         />
         <StepBar
           n={3}
-          label="…of tiles that dealer has on display"
-          help="The same dealer buying a design that is on display at its shop (displays put up by this month, any earlier month)."
+          label="Sales of the tiles on display"
+          help="Only tiles that are on display at the same dealer who bought them. Other tiles those dealers bought are left out."
           value={r.displayedDesigns}
           of={r.total}
           strong
@@ -126,11 +133,11 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
           <Kpi label="Displays put up" value={num(r.monthDisplays)} />
           <Kpi label="Dealers" value={num(r.monthDealerCount)} />
-          <Kpi label="4 · Everything these dealers bought" value={inrCompact(r.monthDealers)} sub={`in ${monthName(month)}, all tiles`} />
+          <Kpi label="4 · All sales to these dealers" value={inrCompact(r.monthDealers)} sub="any tile, on display or not" />
           <Kpi
-            label="5 · …of the tiles displayed this month"
+            label="5 · Sales of the tiles put on display this month"
             value={inrCompact(r.monthDesigns)}
-            sub={r.monthDealers ? `${pct(r.monthDesigns / r.monthDealers)} of what they bought` : undefined}
+            sub={r.monthDealers ? `${pct(r.monthDesigns / r.monthDealers)} of step 4 · same as the report's ${monthName(month)} column` : undefined}
           />
         </div>
       </Section>
@@ -142,12 +149,12 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
               <tr>
                 <th>Zone</th>
                 <th>Region</th>
-                <th className="num">1 · All tile sales</th>
-                <th className="num">2 · To display dealers</th>
-                <th className="num">3 · Displayed tiles</th>
+                <th className="num">1 · All sales</th>
+                <th className="num">2 · To dealers with a display</th>
+                <th className="num">3 · Tiles on display</th>
                 <th className="num">3 as % of 1</th>
-                <th className="num">Displays put up</th>
-                <th className="num">5 · Bought of those</th>
+                <th className="num">Displays put up this month</th>
+                <th className="num">5 · Sales of those tiles</th>
               </tr>
             </thead>
             <tbody>
