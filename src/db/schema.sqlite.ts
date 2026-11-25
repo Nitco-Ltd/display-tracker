@@ -151,6 +151,8 @@ export const sapCustomer = sqliteTable("sap_customer", {
   fullName: text("full_name"),
   gstin: text("gstin"),
   postalCode: text("postal_code"),
+  salesDistrict: text("sales_district"), // zone code, e.g. EZ1 (customer sales area, sales org 1801)
+  salesOffice: text("sales_office"), // region office, e.g. BH1 / BH2 / BHC = Bihar
   createdOn: text("created_on"),
   deleted: integer("deleted").notNull().default(0),
   lastSeenAt: text("last_seen_at").notNull(),
@@ -185,3 +187,18 @@ export const appUser = sqliteTable("app_user", {
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
+
+// All tile sales (division 02) per customer and month, same document rules as sap_sales_monthly. Feeds the
+// "Monthly sales" view: total sales of a region, how much went to dealers with displays, etc.
+export const sapCustomerMonthly = sqliteTable(
+  "sap_customer_monthly",
+  {
+    customer: text("customer").notNull(),
+    month: text("month").notNull(), // yyyy-mm
+    volume: real("volume").notNull(),
+    value: real("value").notNull(),
+    extraVolume: real("extra_volume").notNull().default(0),
+    extraValue: real("extra_value").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.customer, t.month] })],
+);

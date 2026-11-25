@@ -29,6 +29,13 @@
       "when": 1795587633365,
       "tag": "0003_daffy_lady_deathstrike",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795597507564,
+      "tag": "0004_strong_mindworm",
+      "breakpoints": true
     }
   ]
 }

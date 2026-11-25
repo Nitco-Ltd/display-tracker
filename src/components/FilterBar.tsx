@@ -9,7 +9,19 @@ function monthLabel(ym: string) {
   return `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][m - 1]} ${y}`;
 }
 
-export function FilterBar({ options, extra }: { options: FilterOptions; extra?: React.ReactNode }) {
+export function FilterBar({
+  options,
+  extra,
+  fields: only,
+  labels = {},
+  singles = [],
+}: {
+  options: FilterOptions;
+  extra?: React.ReactNode;
+  fields?: string[]; // show only these URL params (default: all)
+  labels?: Record<string, string>; // relabel a field, e.g. { month: "Sales month" }
+  singles?: string[]; // single-choice fields
+}) {
   const router = useRouter();
   const path = usePathname();
   const sp = useSearchParams();
@@ -43,9 +55,11 @@ export function FilterBar({ options, extra }: { options: FilterOptions; extra?: 
   return (
     <div className={`card p-3 mb-5 transition-opacity ${pending ? "opacity-60" : ""}`}>
       <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-        {fields.map(([p, label, opts]) => (
-          <MultiSelect key={p} label={label} options={opts} selected={get(p)} onChange={(v) => set(p, v)} />
-        ))}
+        {fields
+          .filter(([p]) => !only || only.includes(p))
+          .map(([p, label, opts]) => (
+            <MultiSelect key={p} label={labels[p] ?? label} single={singles.includes(p)} options={opts} selected={get(p)} onChange={(v) => set(p, v)} />
+          ))}
         <MultiSelect
           single
           label="Sales counted"

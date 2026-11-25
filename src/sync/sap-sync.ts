@@ -59,8 +59,21 @@ export async function syncSap(opts: { full?: boolean; forceMaterials?: boolean }
     const lastCust = await getState("sap_customers_synced_at");
     if (opts.forceMaterials || !lastCust || Date.now() - Date.parse(lastCust) > MATERIAL_MAX_AGE_DAYS * 86_400_000) {
       try {
+        // Zone (sales district) and region office per customer, for the Monthly sales view.
+        const area = new Map<string, { salesDistrict: string | null; salesOffice: string | null }>();
+        try {
+          for await (const page of sap.customerSalesAreas())
+            for (const a of page) if (!area.has(a.customer) || (!area.get(a.customer)!.salesOffice && a.salesOffice)) area.set(a.customer, a);
+        } catch (e) {
+          log.warn(`[sap] customer sales areas not read (${(e as Error).message.slice(0, 200)}); zones/regions kept from the last run`);
+        }
         for await (const page of sap.customers()) {
-          await upsertMany(t.sapCustomer, page.map((c) => ({ ...c, lastSeenAt: startedAt })), t.sapCustomer.customer);
+          await upsertMany(
+            t.sapCustomer,
+            page.map((c) => ({ ...c, ...(area.get(c.customer) ?? {}), lastSeenAt: startedAt })),
+            t.sapCustomer.customer,
+            area.size ? {} : { keep: ["salesDistrict", "salesOffice"] },
+          );
           customers += page.length;
         }
         await setState("sap_customers_synced_at", startedAt);
@@ -116,6 +129,10 @@ export async function rebuildMonthlySales(): Promise<{ rows: number; noVolume: n
 
   type Acc = { dealerCode: string; materialCode: string; month: string; volume: number; value: number; extraVolume: number; extraValue: number; lineCount: number; volumeIncomplete: number };
   const acc = new Map<string, Acc>();
+  // All tile sales per customer × month (division 02, like NITCO's Sales data MIS) for the Monthly sales view.
+  const tileDivisions = new Set(csv(config().SAP_TILE_DIVISIONS));
+  type CAcc = { customer: string; month: string; volume: number; value: number; extraVolume: number; extraValue: number };
+  const cust = new Map<string, CAcc>();
   let noVolume = 0;
   for (const l of await db.select().from(t.sapBillingItem)) {
     if (l.isCancelled || !l.soldTo || !l.material || !l.billingDate || !l.docType) continue;
@@ -140,7 +157,26 @@ export async function rebuildMonthlySales(): Promise<{ rows: number; noVolume: n
       if (vol === null) a.volumeIncomplete = 1;
     }
     acc.set(key, a);
+    if (!tileDivisions.size || tileDivisions.has(l.division ?? "")) {
+      const ck = `${l.soldTo}|${a.month}`;
+      const c = cust.get(ck) ?? { customer: l.soldTo, month: a.month, volume: 0, value: 0, extraVolume: 0, extraValue: 0 };
+      if (isExtra) {
+        c.extraVolume += sign * (vol ?? 0);
+        c.extraValue += sign * (l.netAmount ?? 0);
+      } else {
+        c.volume += sign * (vol ?? 0);
+        c.value += sign * (l.netAmount ?? 0);
+      }
+      cust.set(ck, c);
+    }
   }
+  const custRows = [...cust.values()].map((c) => ({
+    ...c,
+    volume: +c.volume.toFixed(3),
+    value: +c.value.toFixed(3),
+    extraVolume: +c.extraVolume.toFixed(3),
+    extraValue: +c.extraValue.toFixed(3),
+  }));
   const now = nowIso();
   const rows = [...acc.values()].map((a) => ({
     ...a,
@@ -153,6 +189,8 @@ export async function rebuildMonthlySales(): Promise<{ rows: number; noVolume: n
   await db.transaction(async (tx) => {
     await tx.delete(t.sapSalesMonthly);
     for (let i = 0; i < rows.length; i += 500) await tx.insert(t.sapSalesMonthly).values(rows.slice(i, i + 500));
+    await tx.delete(t.sapCustomerMonthly);
+    for (let i = 0; i < custRows.length; i += 500) await tx.insert(t.sapCustomerMonthly).values(custRows.slice(i, i + 500));
   });
   return { rows: rows.length, noVolume };
 }

@@ -8,8 +8,9 @@ function monthLabel(ym: string) {
   return `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][m - 1]}-${y}`;
 }
 
-export function DownloadForm({ options }: { options: FilterOptions }) {
-  const [v, setV] = useState<Record<string, string[]>>({ month: options.months[0] ? [options.months[0]] : [] });
+export function DownloadForm({ options, initialMonth }: { options: FilterOptions; initialMonth?: string }) {
+  const first = initialMonth && options.months.includes(initialMonth) ? initialMonth : options.months[0];
+  const [v, setV] = useState<Record<string, string[]>>({ month: first ? [first] : [] });
   const [error, setError] = useState("");
   const set = (k: string) => (vals: string[]) => setV((s) => ({ ...s, [k]: vals }));
   const o = (vals: string[]) => vals.map((x) => ({ value: x, label: x }));

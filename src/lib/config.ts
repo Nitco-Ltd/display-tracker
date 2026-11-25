@@ -38,6 +38,8 @@ const schema = z.object({
   // Not decided yet whether these count as sales: kept apart, so reports can be made with and without them.
   SAP_EXTRA_DOC_TYPES: z.string().default("ZNTI,ZDMS"), // + quantity and value
   SAP_EXTRA_VALUE_ONLY_DOC_TYPES: z.string().default("ZTDN"), // + value only (debit notes)
+  // Divisions counted as tile sales in the Monthly sales view (NITCO's Sales data MIS = division 02). Blank = all.
+  SAP_TILE_DIVISIONS: z.string().default("02"),
   SAP_FIRST_BILLING_DATE: z.string().default("2025-03-01"),
   SAP_RECHECK_MONTHS: z.coerce.number().int().min(0).max(12).default(3),
   SAP_VOLUME_UNIT: z.string().default("M2"),

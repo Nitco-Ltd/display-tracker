@@ -248,6 +248,16 @@ export class SapClient {
     }
   }
 
+  /** Each customer's sales district (zone, e.g. EZ1) and sales office (region, e.g. BH1) in the sales org(s). */
+  async *customerSalesAreas(): AsyncGenerator<{ customer: string; salesDistrict: string | null; salesOffice: string | null }[]> {
+    const orgs = csv(config().SAP_SALES_ORGS);
+    const params: Record<string, string> = { $select: "Customer,SalesOrganization,SalesDistrict,SalesOffice" };
+    if (orgs.length) params.$filter = orgs.map((o) => `SalesOrganization eq '${o}'`).join(" or ");
+    for await (const page of this.pages("API_BUSINESS_PARTNER/A_CustomerSalesArea", params, 5000)) {
+      yield page.map((r) => ({ customer: padCustomer(str(r.Customer))!, salesDistrict: str(r.SalesDistrict), salesOffice: str(r.SalesOffice) }));
+    }
+  }
+
   /** One small call to check connectivity and print field names (used by `npm run sync:sap -- --probe`). */
   async probe(): Promise<{ header: string[]; item: string[] }> {
     const res = await this.get(this.url("API_BILLING_DOCUMENT_SRV/A_BillingDocument", { $top: "1", $expand: "to_Item" }), "SAP probe");

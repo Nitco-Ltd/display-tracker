@@ -104,6 +104,7 @@ The **filters** at the top (display month, zone, region, RMI, dealer, dealer typ
 | **Overview** | Key numbers, **before vs after display** (the main "did displays work?" view), displays per month and the sales that followed. "How these numbers are calculated" is at the bottom. |
 | **Leaderboards** | Zones, RMIs, dealers and designs ranked by sales after display or by conversion rate. |
 | **Zero sales** | Follow-up list: displays with no sales within 1/2/3/6/12 months. Export to Excel. |
+| **Monthly sales** | Pick a sales month and an area: all tile sales there (same as the Sales data MIS), how much went to dealers with displays, and how much was a dealer buying a tile it displays; plus the displays put up that month. By region. |
 | **Displays** | Every display with all report columns and a sales summary. **Export to Excel** exports exactly what's filtered. |
 | **Download report** | The monthly report, like RMI's own report page: pick a month and optional filters, then **Download Excel**. |
 
@@ -169,7 +170,7 @@ Run these in Command Prompt in the project folder.
 |---|---|
 | ZVDT | Sale: + quantity, + value |
 | ZRTI | Return: − quantity, − value |
-| ZCBR, ZCPD, ZCQC | Credit note: − value only |
+| ZCBR, ZCPD | Credit note: − value only (ZCQC quality-claim notes are not counted, as in the Sales data MIS) |
 | Everything else (marble, stock transfer, samples, export, cancellations, pro forma, …) | Ignored |
 
 Cancelled invoices are ignored. Month = invoice date. Value = net amount, **before GST**. Volume = **m²**, converted from boxes using each tile's conversion in SAP (e.g. 1 box of 600×1200 = 1.44 m²).

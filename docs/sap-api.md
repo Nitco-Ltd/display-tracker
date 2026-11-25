@@ -94,7 +94,7 @@ are active on PRD (not on QAS, 192.168.81.88). Read access verified with user `1
 | `SAP_SALES_ORGS` | `1801` | Domestic (INR). 1802 = export (USD/EUR) is excluded |
 | `SAP_SALES_DOC_TYPES` | `ZVDT` | Normal tile invoice → +quantity, +value |
 | `SAP_RETURN_DOC_TYPES` | `ZRTI` | Tile return credit note → −quantity, −value |
-| `SAP_VALUE_ONLY_DOC_TYPES` | `ZCBR,ZCPD,ZCQC` | Rate-difference / claim credit notes → −value only |
+| `SAP_VALUE_ONLY_DOC_TYPES` | `ZCBR,ZCPD` | Rate-difference / claim credit notes → −value only (ZCQC removed 2026-11-25: the Sales data MIS doesn't include it) |
 | everything else | ignored | Marble (ZMAR, ZMRO, ZMBR, ZMRJ), stock transfer (ZSTM), mosaic/services (ZDMO, ZSER, YSER, ZSTF, ZAF1, ZSCR), samples (YDMS), export (ZEXO), cancellations (S1–S3) and pro forma (ZKB, YSTM, YDMS) |
 
 Cancelled invoices (`BillingDocumentIsCancelled`) are always excluded. Month = billing date. Value = `NetAmount`
@@ -174,3 +174,12 @@ SAP sales point at exactly one candidate: `dealer_purchases` (the dealers who di
 counting linked accounts) or `only_one_selling` (they bought none, and only one candidate has sold at all since the first
 display). A blank RMI size with exactly one SAP product of that name is linked too. These are re-evaluated on every sync
 (after the SAP sync), so they can change as new sales arrive; a decision made by hand (stored as approved/manual/rejected) always wins. (The Design review page was removed on 2026-11-25; the 26 decisions made there are kept.)
+
+**Monthly sales view (2026-11-25), checked against the Sales data MIS:** each customer's zone and region come from SAP
+(`A_CustomerSalesArea`, sales org 1801: sales district = zone code, sales office = region office; named like RMI by majority
+of RMI dealers per office, e.g. BH1/BH2/BHC → Bihar). All tile sales (division 02, `SAP_TILE_DIVISIONS`) per customer and month
+are kept in `sap_customer_monthly`. Aug-2026: Bihar ₹3,61,78,359, Orissa ₹2,00,13,227, Jharkhand ₹37,27,319, East Zone 1
+₹5,99,18,906 — identical to the MIS file once ZCQC is excluded (the file has no ZCQC lines; ZCQC was the only difference).
+Steps shown on the page and in the report's Summary sheet: 1 all tile sales · 2 to dealers with a display (put up by that
+month) · 3 of tiles that dealer has on display · 4 everything bought by dealers who got a display that month · 5 of the tiles
+displayed that month (= the report's display-month column). Implemented in `src/sales/funnel.ts`.
