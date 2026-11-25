@@ -4,7 +4,7 @@
 //   2. displayDealers   …of which to dealers that have an RMI display (put up in or before this month)
 //   3. displayedDesigns …of which the designs that dealer has on display (put up in or before this month)
 //   4. monthDealers     everything bought by the dealers who got a display IN this month
-//   5. monthDesigns     …of which the designs displayed in this month (= that month's report, display-month column)
+//   5. monthDesigns     …of which the designs displayed in this month (= that month's Display Tracker Report, display-month column)
 //
 // Area = the customer's SAP sales district (zone) and sales office (region), named the way RMI names them
 // (EZ1 → "East Zone 1", BH1/BH2/BHC → "Bihar"; learnt from the RMI dealers in each office).

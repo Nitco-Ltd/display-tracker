@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { desc, lte } from "drizzle-orm";
 import { FilterBar } from "@/components/FilterBar";
-import { Kpi, Section } from "@/components/Kpi";
+import { Section } from "@/components/Kpi";
 import { filterOptions, type SearchParams } from "@/analytics/data";
 import { currentMonth } from "@/analytics/metrics";
 import { requireViewer } from "@/auth/viewer";
@@ -14,58 +14,46 @@ import { inr, inrCompact, monthName, num, pct } from "@/lib/format";
 
 const list = (v: string | string[] | undefined) => (Array.isArray(v) ? v : v ? [v] : []).filter(Boolean);
 
-function StepBar({
-  n,
-  label,
-  help,
-  value,
-  of,
-  strong,
-  removed,
-}: {
-  n: number;
-  label: string;
-  help: string;
-  value: number;
-  of: number;
-  strong?: boolean;
-  removed?: { label: string; value: number }; // what this step leaves out, compared with the step above
-}) {
-  const share = of > 0 ? Math.max(0, value / of) : 0;
+/** One row of a breakdown tree: code (A, B, B1…), name, plain description, value, share of the top line, and a bar. */
+function TreeRow({ code, label, help, value, total, level, bold }: { code: string; label: string; help: string; value: number; total: number; level: 0 | 1 | 2; bold?: boolean }) {
+  const share = total > 0 ? Math.max(0, value / total) : 0;
   return (
-    <div className="grid grid-cols-[28px_1fr] gap-x-3 py-2.5 border-b border-line last:border-0">
-      <div className="h-7 w-7 rounded-full bg-surface-0 border border-line text-[13px] font-semibold flex items-center justify-center">{n}</div>
-      <div>
-        <div className="flex flex-wrap items-baseline gap-x-3">
-          <div className="text-[14px] font-medium">{label}</div>
-          <div className={`ml-auto text-[18px] tracking-tight ${strong ? "font-semibold" : "font-medium"}`}>{inrCompact(value)}</div>
-          {n > 1 && <div className="text-[12px] text-ink-3 w-[70px] text-right">{pct(share)}</div>}
-        </div>
-        <div className="mt-1.5 h-2.5 rounded-full bg-surface-0 overflow-hidden" aria-hidden>
-          <div className="h-full rounded-full" style={{ width: `${Math.min(100, share * 100)}%`, background: "var(--series-1)" }} />
-        </div>
-        <div className="text-[12px] text-ink-3 mt-1">{help}</div>
-        {removed && (
-          <div className="text-[13px] text-ink-2 mt-1">
-            Left out from step {n - 1}: <b>{inrCompact(removed.value)}</b> {removed.label}
+    <tr className={bold ? "font-semibold" : undefined}>
+      <td style={{ whiteSpace: "normal" }}>
+        <div className="flex items-start gap-2" style={{ paddingLeft: `${level * 16}px` }}>
+          <span className="shrink-0 min-w-[26px] rounded border border-line bg-surface-0 px-1 text-center text-[12px] font-semibold">{code}</span>
+          <div>
+            <div className="text-[14px]">{label}</div>
+            <div className="text-[12px] text-ink-3 font-normal">{help}</div>
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      </td>
+      <td className="num text-[15px] whitespace-nowrap">{inr(value)}</td>
+      <td className="num whitespace-nowrap">{pct(total ? value / total : NaN)}</td>
+      <td className="hidden lg:table-cell w-[28%] min-w-[90px]">
+        <div className="h-2.5 rounded-full bg-surface-0 overflow-hidden" aria-hidden>
+          <div className="h-full rounded-full" style={{ width: `${Math.min(100, share * 100)}%`, background: level === 0 ? "var(--series-1)" : "var(--series-1-soft)" }} />
+        </div>
+      </td>
+    </tr>
   );
 }
 
-/** One line of the "split of all sales" table. */
-function SplitRow({ label, help, value, total, bold }: { label: string; help: string; value: number; total: number; bold?: boolean }) {
+function TreeTable({ children, pctOf }: { children: React.ReactNode; pctOf: string }) {
   return (
-    <tr className={bold ? "font-semibold" : undefined}>
-      <td>
-        <div>{label}</div>
-        <div className="text-[12px] text-ink-3 font-normal">{help}</div>
-      </td>
-      <td className="num">{inr(value)}</td>
-      <td className="num">{pct(total ? value / total : NaN)}</td>
-    </tr>
+    <div className="overflow-auto">
+      <table className="data">
+        <thead>
+          <tr>
+            <th>Part</th>
+            <th className="num">Sales</th>
+            <th className="num">% of {pctOf}</th>
+            <th aria-label="share" className="hidden lg:table-cell" />
+          </tr>
+        </thead>
+        <tbody>{children}</tbody>
+      </table>
+    </div>
   );
 }
 
@@ -112,79 +100,60 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
         <p className="text-[14px] text-ink-2 mt-1">
           Dealers here bought <b>{inr(r.total)}</b> of tiles from NITCO in {monthName(month)}
           {month === cur ? " (month so far)" : ""}. Of that, <b>{inrCompact(r.displayedDesigns)}</b> ({pct(r.total ? r.displayedDesigns / r.total : NaN)}) was dealers buying tiles they
-          have on display.
+          have on display (B2).
           {includeExtra ? " Includes ZTDN, ZNTI and ZDMS invoices." : ""}
         </p>
       </div>
 
       <Section
-        title={`Where ${monthName(month)}'s sales went`}
-        note="Each step is a smaller part of the step above it. Sales are SAP tile invoices minus returns and credit notes, the same as the Sales data MIS. “On display” means any display put up in this month or earlier."
+        title={`${monthName(month)} sales, broken down`}
+        note={
+          <>
+            B + C = A, and B1 + B2 = B. Sales are SAP tile invoices minus returns and credit notes, the same as the Sales data MIS. “On display” means a
+            display put up at that dealer in {monthName(month)} or earlier.
+          </>
+        }
       >
-        <StepBar
-          n={1}
-          label="All sales"
-          help="Every tile sold in this area this month, to every dealer."
-          value={r.total}
-          of={r.total}
-          strong
-        />
-        <StepBar
-          n={2}
-          label="Sales to dealers who have a display"
-          help={`Everything bought by the ${num(r.displayDealerCount)} dealers who have at least one display, whether the tile is on display or not. Dealers without any display are left out.`}
-          value={r.displayDealers}
-          of={r.total}
-          removed={{ label: "sold to dealers without any display", value: r.total - r.displayDealers }}
-        />
-        <StepBar
-          n={3}
-          label="Sales of the tiles on display"
-          help="Only tiles that are on display at the same dealer who bought them. Other tiles those dealers bought are left out."
-          value={r.displayedDesigns}
-          of={r.total}
-          strong
-          removed={{ label: "of tiles not on display, bought by dealers who have a display", value: r.displayDealers - r.displayedDesigns }}
-        />
-      </Section>
-
-      <Section title={`All ${monthName(month)} sales, split three ways`} note="The three parts add up to all sales.">
-        <table className="data">
-          <thead>
-            <tr>
-              <th>Part</th>
-              <th className="num">Sales</th>
-              <th className="num">% of all sales</th>
-            </tr>
-          </thead>
-          <tbody>
-            <SplitRow label="Dealers without any display" help="Dealers who have no RMI display." value={r.total - r.displayDealers} total={r.total} />
-            <SplitRow
-              label="Dealers with a display: tiles not on display"
-              help="Other tiles bought by dealers who have a display."
-              value={r.displayDealers - r.displayedDesigns}
-              total={r.total}
-            />
-            <SplitRow
-              label="Dealers with a display: tiles on display"
-              help="Tiles bought by the same dealer that displays them."
-              value={r.displayedDesigns}
-              total={r.total}
-            />
-            <SplitRow label="All sales" help="Total of the three parts." value={r.total} total={r.total} bold />
-          </tbody>
-        </table>
+        <TreeTable pctOf="A">
+          <TreeRow code="A" level={0} bold label="Total sales" help="Every tile sold in this area this month, to every dealer." value={r.total} total={r.total} />
+          <TreeRow
+            code="B"
+            level={1}
+            bold
+            label="Sales to dealers with a display"
+            help={`Everything bought by the ${num(r.displayDealerCount)} dealers who have at least one display.`}
+            value={r.displayDealers}
+            total={r.total}
+          />
+          <TreeRow
+            code="B1"
+            level={2}
+            label="Dealers with a display, with tiles not on display"
+            help="Tiles these dealers bought that are not on display at their shop."
+            value={r.displayDealers - r.displayedDesigns}
+            total={r.total}
+          />
+          <TreeRow
+            code="B2"
+            level={2}
+            label="Dealers with a display, with tiles on display"
+            help="Tiles these dealers bought that are on display at their shop."
+            value={r.displayedDesigns}
+            total={r.total}
+          />
+          <TreeRow code="C" level={1} bold label="Sales to dealers without a display" help="Everything bought by dealers who have no RMI display." value={r.total - r.displayDealers} total={r.total} />
+        </TreeTable>
       </Section>
 
       <Section
-        title="Which tiles dealers with a display bought"
-        note="“Not on display” means not on display at the dealer who bought it (it may be on display at another dealer). Top 25 tiles by sales in each list."
+        title="B1 and B2: which tiles dealers with a display bought"
+        note="Top 25 tiles by sales in each list. “Not on display” means not on display at the dealer who bought it (another dealer may display it)."
       >
         <div className="grid gap-5 lg:grid-cols-2">
           {(
             [
-              ["Tiles not on display", r.tilesNotOnDisplay, r.displayDealers - r.displayedDesigns],
-              ["Tiles on display", r.tilesOnDisplay, r.displayedDesigns],
+              ["B1 · Tiles not on display at the dealer's shop", r.tilesNotOnDisplay, r.displayDealers - r.displayedDesigns],
+              ["B2 · Tiles on display at the dealer's shop", r.tilesOnDisplay, r.displayedDesigns],
             ] as const
           ).map(([title, tiles, total]) => (
             <div key={title} className="overflow-auto">
@@ -224,11 +193,11 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
       </Section>
 
       <Section
-        title={`Displays put up in ${monthName(month)}`}
+        title={`Display Tracker Report · displays put up in ${monthName(month)}`}
         note={
           <>
-            This is what the {monthName(month)} Display Tracker report covers. Its other columns ({monthName(addMonths(month, -1))}, and the months after{" "}
-            {monthName(month)}) show the same dealers and tiles in other months.
+            {num(r.monthDisplays)} displays at {num(r.monthDealerCount)} dealers. D2 is the {monthName(month)} column of the {monthName(month)} Display Tracker Report. The
+            report&apos;s other columns ({monthName(addMonths(month, -1))}, and the months after {monthName(month)}) show the same dealers and tiles in other months.
           </>
         }
         action={
@@ -237,43 +206,56 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
               See these displays
             </Link>
             <Link href={reportHref} className="whitespace-nowrap rounded-md px-3 py-1.5 text-[13px] font-medium bg-accent text-white">
-              Download report
+              Download Display Tracker Report
             </Link>
           </div>
         }
       >
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
-          <Kpi label="Displays put up" value={num(r.monthDisplays)} />
-          <Kpi label="Dealers" value={num(r.monthDealerCount)} />
-          <Kpi label="4 · All sales to these dealers" value={inrCompact(r.monthDealers)} sub="any tile, on display or not" />
-          <Kpi
-            label="Tiles not put on display this month"
-            value={inrCompact(r.monthDealers - r.monthDesigns)}
-            sub={r.monthDealers ? `${pct((r.monthDealers - r.monthDesigns) / r.monthDealers)} of step 4` : undefined}
+        <TreeTable pctOf="D">
+          <TreeRow
+            code="D"
+            level={0}
+            bold
+            label={`Sales to the dealers who got a display in ${monthName(month)}`}
+            help="Everything these dealers bought this month."
+            value={r.monthDealers}
+            total={r.monthDealers}
           />
-          <Kpi
-            label="5 · Tiles put on display this month"
-            value={inrCompact(r.monthDesigns)}
-            sub={r.monthDealers ? `${pct(r.monthDesigns / r.monthDealers)} of step 4 · = the report's ${monthName(month)} column` : undefined}
+          <TreeRow
+            code="D1"
+            level={1}
+            label="…with tiles not put on display this month"
+            help={`Tiles that were not part of the ${monthName(month)} displays at that dealer.`}
+            value={r.monthDealers - r.monthDesigns}
+            total={r.monthDealers}
           />
-        </div>
+          <TreeRow
+            code="D2"
+            level={1}
+            bold
+            label="…with tiles put on display this month"
+            help={`The tiles displayed at that dealer in ${monthName(month)} (Display Tracker Report, ${monthName(month)} column).`}
+            value={r.monthDesigns}
+            total={r.monthDealers}
+          />
+        </TreeTable>
       </Section>
 
-      <Section title="By region" note="Same steps, split by the customer's region in SAP (sales office).">
+      <Section title="By region" note="The same parts, split by the customer's region in SAP (sales office).">
         <div className="overflow-auto">
           <table className="data">
             <thead>
               <tr>
                 <th>Zone</th>
                 <th>Region</th>
-                <th className="num">1 · All sales</th>
-                <th className="num">Dealers without a display</th>
-                <th className="num">2 · Dealers with a display</th>
-                <th className="num">…tiles not on display</th>
-                <th className="num">3 · …tiles on display</th>
-                <th className="num">3 as % of 1</th>
-                <th className="num">Displays put up this month</th>
-                <th className="num">5 · Sales of those tiles</th>
+                <th className="num">A · Total sales</th>
+                <th className="num">B · With a display</th>
+                <th className="num">B1 · Tiles not on display</th>
+                <th className="num">B2 · Tiles on display</th>
+                <th className="num">C · Without a display</th>
+                <th className="num">B2 as % of A</th>
+                <th className="num">Displays put up</th>
+                <th className="num">D2 · Report column</th>
               </tr>
             </thead>
             <tbody>
@@ -282,10 +264,10 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
                   <td>{x.zone}</td>
                   <td>{x.region}</td>
                   <td className="num">{inr(x.total)}</td>
-                  <td className="num">{inr(x.total - x.displayDealers)}</td>
                   <td className="num">{inr(x.displayDealers)}</td>
                   <td className="num">{inr(x.displayDealers - x.displayedDesigns)}</td>
                   <td className="num">{inr(x.displayedDesigns)}</td>
+                  <td className="num">{inr(x.total - x.displayDealers)}</td>
                   <td className="num">{pct(x.total ? x.displayedDesigns / x.total : NaN)}</td>
                   <td className="num">{num(x.monthDisplays)}</td>
                   <td className="num">{inr(x.monthDesigns)}</td>

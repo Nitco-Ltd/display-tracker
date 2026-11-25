@@ -158,7 +158,7 @@ export async function buildReportBuffer(
 const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const longMonth = (ym: string) => `${MONTHS_LONG[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`;
 
-/** "Summary" sheet: the month's sales in plain words (steps 1–5) and what the Report sheet's columns mean. */
+/** "Summary" sheet: the month's sales broken down (A, B, B1, B2, C; D, D1, D2) and what the Report sheet's columns mean. */
 export function addSummarySheet(wb: ExcelJS.Workbook, cohort: string, f: FunnelResult, filter: ReportFilter, upTo: string, includeExtra: boolean) {
   const ws = wb.addWorksheet("Summary");
   ws.getColumn(1).width = 8;
@@ -168,7 +168,7 @@ export function addSummarySheet(wb: ExcelJS.Workbook, cohort: string, f: FunnelR
   const money = "₹#,##,##0";
   const area = [...(filter.regions ?? []), ...(filter.regions?.length ? [] : (filter.zones ?? []))].join(", ") || "All regions";
   const extra = [filter.rmiNames?.length ? `RMI: ${filter.rmiNames.join(", ")}` : "", filter.dealerCodes?.length ? `Dealers: ${filter.dealerCodes.join(", ")}` : ""].filter(Boolean).join(" · ");
-  const title = ws.addRow([`Display Tracker · ${longMonth(cohort)} · ${area}${extra ? ` · ${extra}` : ""}`]);
+  const title = ws.addRow([`Display Tracker Report · ${longMonth(cohort)} · ${area}${extra ? ` · ${extra}` : ""}`]);
   title.font = { bold: true, size: 14 };
   ws.addRow([includeExtra ? "Sales include ZTDN, ZNTI and ZDMS invoices." : "Sales: SAP tile invoices net of returns and credit notes (ZTDN, ZNTI, ZDMS not included), as in the Sales data MIS."]);
   ws.addRow([]);
@@ -181,55 +181,47 @@ export function addSummarySheet(wb: ExcelJS.Workbook, cohort: string, f: FunnelR
     r.getCell(3).numFmt = money;
     r.getCell(4).numFmt = "0.0%";
   };
-  head(`A. Where ${longMonth(cohort)}'s sales went (each step is a smaller part of the one above; "on display" = displays put up this month or earlier)`);
-  ws.addRow(["Step", "", "Value", "% of step 1"]).font = { bold: true };
-  line("1", "All sales: every tile sold in this area this month, to every dealer", f.total);
-  line("2", "Sales to dealers who have a display: everything they bought, on display or not", f.displayDealers, f.total ? f.displayDealers / f.total : undefined);
-  line("3", "Sales of the tiles on display: only tiles on display at the same dealer who bought them", f.displayedDesigns, f.total ? f.displayedDesigns / f.total : undefined);
+  const of = (v: number, t: number) => (t ? v / t : undefined);
+  head(`1. ${longMonth(cohort)} sales, broken down (B + C = A, B1 + B2 = B; "on display" = put up at that dealer this month or earlier)`);
+  ws.addRow(["", "Part", "Sales", "% of A"]).font = { bold: true };
+  line("A", "Total sales: every tile sold in this area this month, to every dealer", f.total, f.total ? 1 : undefined);
+  line("B", "   Sales to dealers with a display", f.displayDealers, of(f.displayDealers, f.total));
+  line("B1", "      Dealers with a display, with tiles not on display", f.displayDealers - f.displayedDesigns, of(f.displayDealers - f.displayedDesigns, f.total));
+  line("B2", "      Dealers with a display, with tiles on display", f.displayedDesigns, of(f.displayedDesigns, f.total));
+  line("C", "   Sales to dealers without a display", f.total - f.displayDealers, of(f.total - f.displayDealers, f.total));
   ws.addRow([]);
-  ws.addRow(["", "Left out at each step", "Value", "% of step 1"]).font = { bold: true };
-  line("1→2", "Sold to dealers without any display", f.total - f.displayDealers, f.total ? (f.total - f.displayDealers) / f.total : undefined);
-  line("2→3", "Tiles not on display, bought by dealers who have a display", f.displayDealers - f.displayedDesigns, f.total ? (f.displayDealers - f.displayedDesigns) / f.total : undefined);
+  head(`2. Display Tracker Report: displays put up in ${longMonth(cohort)} (${f.monthDisplays} displays, ${f.monthDealerCount} dealers)`);
+  ws.addRow(["", "Part", "Sales", "% of D"]).font = { bold: true };
+  line("D", "Sales to the dealers who got a display this month", f.monthDealers, f.monthDealers ? 1 : undefined);
+  line("D1", "   …with tiles not put on display this month", f.monthDealers - f.monthDesigns, of(f.monthDealers - f.monthDesigns, f.monthDealers));
+  line("D2", "   …with tiles put on display this month (= the Report sheet's " + monthLabel(cohort) + " Sales Value column)", f.monthDesigns, of(f.monthDesigns, f.monthDealers));
   ws.addRow([]);
-  ws.addRow(["", "All sales, split three ways (adds up to step 1)", "Value", "% of step 1"]).font = { bold: true };
-  line("", "Dealers without any display", f.total - f.displayDealers, f.total ? (f.total - f.displayDealers) / f.total : undefined);
-  line("", "Dealers with a display: tiles not on display", f.displayDealers - f.displayedDesigns, f.total ? (f.displayDealers - f.displayedDesigns) / f.total : undefined);
-  line("", "Dealers with a display: tiles on display", f.displayedDesigns, f.total ? f.displayedDesigns / f.total : undefined);
-  line("", "All sales", f.total, f.total ? 1 : undefined);
-  ws.addRow([]);
-  head(`B. Displays put up in ${longMonth(cohort)} (the Report sheet)`);
-  ws.addRow(["", "Displays put up", f.monthDisplays]);
-  ws.addRow(["", "Dealers", f.monthDealerCount]);
-  line("4", "All sales to these dealers this month (any tile, on display or not)", f.monthDealers);
-  line("", "…tiles not put on display this month", f.monthDealers - f.monthDesigns, f.monthDealers ? (f.monthDealers - f.monthDesigns) / f.monthDealers : undefined);
-  line("5", "Sales of the tiles put on display this month (= the Report sheet's " + monthLabel(cohort) + " Sales Value column)", f.monthDesigns, f.monthDealers ? f.monthDesigns / f.monthDealers : undefined);
-  ws.addRow([]);
-  head("C. The month columns in the Report sheet");
+  head("3. The month columns in the Report sheet");
   const vis = visibleMonths(cohort, upTo);
   const notes = [
     `Every display is followed for 14 months: ${monthLabel(addMonth(cohort, -1))} (the month before it was put up), ${monthLabel(cohort)} (the display month) and the 12 months after (to ${monthLabel(addMonth(cohort, 12))}).`,
     `Only months that have started are shown (${vis.map(monthLabel).join(", ")}); later months are added automatically as time passes.`,
     "Each column is that dealer's purchases of that displayed tile in that month (all the dealer's SAP accounts, and the tile's packaging variants).",
     "Avg Sales Value = the sum of all 14 months ÷ 14 (RMI's rule), with months not yet reached counted as 0.",
-    "Sales in other places and by other dealers are in section A; displays put up in other months are in that month's report.",
+    "Sales in other places and by other dealers are in part 1; displays put up in other months are in that month's Display Tracker Report.",
   ];
   for (const n of notes) {
     const r = ws.addRow(["", n]);
     r.getCell(2).alignment = { wrapText: true, vertical: "top" };
   }
   ws.addRow([]);
-  head("D. By region");
+  head("4. By region");
   const h = ws.addRow([
     "",
     "Zone · Region",
-    "1 · All sales",
-    "3 as % of 1",
-    "Dealers without a display",
-    "2 · Dealers with a display",
-    "…tiles not on display",
-    "3 · …tiles on display",
-    "Displays put up this month",
-    "5 · Sales of those tiles",
+    "A · Total sales",
+    "B2 as % of A",
+    "B · With a display",
+    "B1 · Tiles not on display",
+    "B2 · Tiles on display",
+    "C · Without a display",
+    "Displays put up",
+    "D2 · Report column",
   ]);
   h.font = { bold: true };
   for (const x of f.byRegion) {
@@ -238,10 +230,10 @@ export function addSummarySheet(wb: ExcelJS.Workbook, cohort: string, f: FunnelR
       `${x.zone} · ${x.region}`,
       x.total,
       x.total ? x.displayedDesigns / x.total : null,
-      x.total - x.displayDealers,
       x.displayDealers,
       x.displayDealers - x.displayedDesigns,
       x.displayedDesigns,
+      x.total - x.displayDealers,
       x.monthDisplays,
       x.monthDesigns,
     ]);
@@ -251,10 +243,10 @@ export function addSummarySheet(wb: ExcelJS.Workbook, cohort: string, f: FunnelR
   for (const c of [5, 6, 7, 8, 9, 10]) ws.getColumn(c).width = 18;
 
   ws.addRow([]);
-  head("E. Which tiles dealers with a display bought (top 25 each; “not on display” = not at the dealer who bought it)");
+  head("5. B1 and B2: which tiles dealers with a display bought (top 25 each; “not on display” = not at the dealer who bought it)");
   for (const [title, tiles] of [
-    ["Tiles not on display", f.tilesNotOnDisplay],
-    ["Tiles on display", f.tilesOnDisplay],
+    ["B1 · Tiles not on display at the dealer's shop", f.tilesNotOnDisplay],
+    ["B2 · Tiles on display at the dealer's shop", f.tilesOnDisplay],
   ] as const) {
     ws.addRow(["", title, "Sales", "Dealers"]).font = { bold: true };
     for (const x of tiles) {
