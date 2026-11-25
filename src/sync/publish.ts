@@ -22,7 +22,7 @@ export async function publishToCloud(): Promise<{ skipped: boolean; rows?: Recor
   const url = config().PUBLISH_DATABASE_URL;
   if (!url) return { skipped: true };
   const run = await startRun("publish");
-  const sql = postgres(url, { max: 1, ssl: /sslmode=disable/.test(url) ? false : "require", connect_timeout: 30 });
+  const sql = postgres(url, { max: 1, ssl: /sslmode=disable/.test(url) ? false : "require", connect_timeout: 30, onnotice: () => {} });
   try {
     const cloud = drizzle(sql, { schema: pg });
     await migrate(cloud, { migrationsFolder: "./drizzle/pg" });

@@ -29,7 +29,8 @@ export function getDb(): Db {
   if (_db) return _db;
   const url = config().DATABASE_URL;
   if (dialectOf(url) === "postgres") {
-    const sql = postgres(url, { max: 5 });
+    // Neon's pooled endpoint ("-pooler" host) runs PgBouncer in transaction mode: no prepared statements.
+    const sql = postgres(url, { max: config().PG_POOL_MAX, prepare: !/-pooler\./.test(url), onnotice: () => {} });
     _db = drizzlePg(sql, { schema: pgSchema }) as unknown as Db;
     _close = () => sql.end();
   } else {

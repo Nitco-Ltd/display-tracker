@@ -10,6 +10,7 @@ const bool = z
 const schema = z.object({
   // Database: "file:./data/app.db" (SQLite) or "postgres://user:pass@host:5432/db" (Postgres).
   DATABASE_URL: z.string().default("file:./data/app.db"),
+  PG_POOL_MAX: z.coerce.number().int().min(1).max(20).default(5), // Postgres connections per server instance
 
   // NITCO RMI web app (undocumented API, see docs/rmi-api.md)
   RMI_BASE_URL: z.string().default("https://rmi.nitco.in/api/NitcoRMI/"),

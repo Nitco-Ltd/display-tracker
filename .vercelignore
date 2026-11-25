@@ -1,0 +1,12 @@
+# Never upload secrets or data to Vercel. The cloud dashboard reads everything from the Neon database.
+.env
+.env.*
+!.env.example
+data/
+reference/
+reports/
+logs/
+.tmp/
+certs/
+node_modules/
+.next/
