@@ -100,6 +100,25 @@ export function buildWorkbook(cohort: string | null, rows: DisplayWithSales[], u
     if (i === 1) col.numFmt = "dd mmm yyyy";
     else if (i >= nDisplay) col.numFmt = "#,##0.000";
   });
+
+  // Second sheet (the "Report" sheet keeps RMI's exact layout): which SAP accounts and codes each row's sales come from.
+  const how = wb.addWorksheet("How sales were matched", { views: [{ state: "frozen", ySplit: 1 }] });
+  how.addRow(["Sequence No", "Dealer Code", "SAP accounts counted", "SAP design codes counted", "Value from linked accounts", "Value, all 14 months"]);
+  how.getRow(1).font = { bold: true };
+  for (const r of rows) {
+    how.addRow([
+      r.refNo,
+      r.dealerCode,
+      r.salesAccounts.join(", "),
+      r.salesCodes.length ? r.salesCodes.join(", ") : "(design not linked to SAP)",
+      r.otherAccountValue,
+      r.sales.reduce((a, s) => a + s.value, 0),
+    ]);
+  }
+  [16, 12, 26, 52, 16, 16].forEach((w, i) => (how.getColumn(i + 1).width = w));
+  how.getColumn(5).numFmt = "#,##0.00";
+  how.getColumn(6).numFmt = "#,##0.00";
+  how.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 6 } };
   return wb;
 }
 

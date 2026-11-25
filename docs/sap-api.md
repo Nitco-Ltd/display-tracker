@@ -14,7 +14,7 @@ confirm them against our system.
 |---|---|---|---|
 | 1 | `API_BILLING_DOCUMENT_SRV` | `A_BillingDocument`, `A_BillingDocumentItem` | Invoices = the sales figures |
 | 2 | `API_PRODUCT_SRV` | `A_Product`, `A_ProductDescription`, `A_ProductUnitsOfMeasure` | Material names (to match RMI designs) and box → sq m conversion |
-| 3 | `API_BUSINESS_PARTNER` *(optional)* | `A_Customer` | Check that RMI dealer codes exist in SAP |
+| 3 | `API_BUSINESS_PARTNER` *(optional)* | `A_Customer` | GST number (`TaxNumber3`) and PIN code (from `CustomerFullName`), to link a dealer's several accounts; weekly |
 
 - **S/4HANA on-premise:** services activated in `/IWFND/MAINT_SERVICE`, plus a technical user whose role
   allows only *display* access to billing documents, products and customers.
@@ -104,8 +104,12 @@ Cancelled invoices (`BillingDocumentIsCancelled`) are always excluded. Month = b
 **First load:** 387,327 lines / 53,578 invoices since 2025-03-01, 24,569 materials, ~2.5 minutes.
 300 of 307 RMI dealers found in SAP; SAP material numbers are identical to RMI's product codes.
 
-**Design variants (decided 2026-11-24):** a display counts sales of its **own linked SAP material code only**.
-Variant codes of the same design (e.g. "TROPICANA (PO)", "(HW)", "(RPO)") are not added.
+**Design variants (decided 2026-11-24, amended 2026-11-25):** a display counts sales of its own linked SAP material code
+**and its packaging variants**. These are codes that are identical except for the trailing serial number (4–6 digits) and have the same design name
+in the material description; the business owner confirmed they are the same tile in different packaging
+(`TIGVMPL1200X600NOGL02160` / `…NOGL03021`). RMI's catalogue keeps the old code, while newer invoices use the new one.
+Implemented in `src/sales/packaging.ts` (used by the sales window and by design matching, where a design whose candidates are all packaging twins is linked automatically: method `packaging_variants`). Codes that differ elsewhere (`DCH`/`DTL`,
+`NO`/`MH`, …) and name variants ("TROPICANA (PO)", "(HW)", "(RPO)") are **not** added; that is unconfirmed.
 
 ## 7. Independent check against SAP's own analytics (2026-11-24)
 
@@ -146,3 +150,12 @@ the same as our value-only rule.
 **Monthly totals (1801):** file ₹227.85 Cr vs ours ₹227.29 Cr, difference ₹56.15 L (0.25%), every month fully
 explained by (A) invoice types our rules ignore — ZDMS, ZTDN, ZNTI, one ZMAR line — ₹52.46 L, and (B) cancellations,
 which the file books on each document's own date while we drop cancelled documents — ₹3.69 L.
+
+
+**Linked dealer accounts (decided 2026-11-25):** a display counts sales billed to any of the dealer's SAP accounts. Accounts are
+the same dealer when `A_Customer.TaxNumber3` (GSTIN) **and** the PIN code are equal, excluding NITCO-internal accounts (code
+not starting `0011`, or "NITCO" in the name). Example: Shree Shyam Tiles `0011002222` (normal) + `0011007639` (Project Dealer,
+created 27 Aug 2026), GSTIN 10COSPP0792L1ZG, PIN 846004. SAP has no customer hierarchy or partner function linking them (checked
+`A_CustSalesPartnerFunc`: only self-references). Implemented in `src/sales/dealers.ts`. Sales from the linked accounts are shown
+separately on the report's "How sales were matched" sheet. If the customer master can't be read, the sync logs a warning and
+sales are counted on the RMI dealer code only.

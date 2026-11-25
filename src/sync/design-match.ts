@@ -5,7 +5,8 @@
 //      size_mismatch  ... but that product's size differs from the display's      -> "needs_review" (NOT used),
 //                     unless SAP has exactly one product with that name in the display's size
 //   2. name_and_size  Same name, several codes, exactly one with the display's size -> status "auto"   (used)
-//   3. ambiguous      Same name, several codes, size doesn't decide                -> "needs_review" (NOT used)
+//   3. packaging_variants  Several codes in the size, all packaging variants of one design -> "auto" (used)
+//      ambiguous      Same name, several codes, size doesn't decide                -> "needs_review" (NOT used)
 //   4. sap_name_and_size  Not in RMI's catalogue; SAP tile description + size -> one code -> "auto" (used)
 //   5. fuzzy          Similar name (Dice ≥ 0.75), best candidate proposed          -> "needs_review" (NOT used)
 //   6. none           Nothing similar                                               -> "unmapped"
@@ -16,6 +17,7 @@ import { getDb, tables } from "@/db/client";
 import { upsertMany } from "@/db/upsert";
 import { designKey, normalizeTileSize } from "@/lib/normalize";
 import { nowIso } from "./runs";
+import { packagingFamilyKey } from "@/sales/packaging";
 
 export interface Candidate {
   code: string;
@@ -62,10 +64,19 @@ export function similarity(a: string, b: string): number {
 export interface MatchResult {
   materialCode: string | null;
   materialName: string | null;
-  method: "exact_name" | "name_and_size" | "sap_name_and_size" | "size_mismatch" | "ambiguous" | "fuzzy" | "none";
+  method: "exact_name" | "name_and_size" | "sap_name_and_size" | "packaging_variants" | "size_mismatch" | "ambiguous" | "fuzzy" | "none";
   confidence: number;
   status: "auto" | "needs_review" | "unmapped";
   candidates: Candidate[];
+}
+
+/** Several codes that are all packaging variants of one design (see src/sales/packaging.ts) -> link the lowest code;
+ *  the sales window adds the others. */
+function onePackagingFamily(cands: Candidate[]): Candidate | null {
+  if (cands.length < 2) return null;
+  const fams = new Set(cands.map((c) => packagingFamilyKey(c.code, c.name)));
+  if (fams.size !== 1 || fams.has(cands[0].code)) return null;
+  return [...cands].sort((a, b) => a.code.localeCompare(b.code))[0];
 }
 
 export function matchDesign(
@@ -100,6 +111,8 @@ export function matchDesign(
     if (sized.length === 1) {
       return { materialCode: sized[0].code, materialName: sized[0].name, method: "name_and_size", confidence: 0.95, status: "auto", candidates: [] };
     }
+    const twin = onePackagingFamily(sized);
+    if (twin) return { materialCode: twin.code, materialName: twin.name, method: "packaging_variants", confidence: 0.9, status: "auto", candidates: [] };
     return { materialCode: null, materialName: null, method: "ambiguous", confidence: 0, status: "needs_review", candidates: (sized.length ? sized : codes).slice(0, 5) };
   }
   // Tier 2: SAP material descriptions (older / discontinued designs not in RMI's catalogue).
@@ -110,6 +123,8 @@ export function matchDesign(
     if (sized.length === 1) {
       return { materialCode: sized[0].code, materialName: sized[0].name, method: "sap_name_and_size", confidence: 0.9, status: "auto", candidates: [] };
     }
+    const twin = onePackagingFamily(sized);
+    if (twin) return { materialCode: twin.code, materialName: twin.name, method: "packaging_variants", confidence: 0.85, status: "auto", candidates: [] };
     if (sapCodes.length) {
       return { materialCode: null, materialName: null, method: "ambiguous", confidence: 0, status: "needs_review", candidates: (sized.length ? sized : sapCodes).slice(0, 5) };
     }

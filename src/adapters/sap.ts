@@ -49,6 +49,16 @@ export interface SapMaterial {
 // ---------- OData v2 helpers ----------
 
 /** "/Date(1690848000000)/" or "/Date(1690848000000+0000)/" -> Date */
+export interface SapCustomer {
+  customer: string; // 10 digits, as RMI stores dealer codes
+  name: string | null;
+  fullName: string | null; // e.g. "Company SHREE SHYAM TILES/846004 DARBHANGA,"
+  gstin: string | null; // TaxNumber3 (GST registration number)
+  postalCode: string | null; // PIN code, from the full name ("…/846004 DARBHANGA")
+  createdOn: string | null; // yyyy-mm-dd
+  deleted: number; // 1 = marked for deletion
+}
+
 export function odataDate(v: unknown): Date | null {
   if (typeof v !== "string") return null;
   const m = v.match(/\/Date\((-?\d+)(?:[+-]\d{4})?\)\//);
@@ -219,6 +229,22 @@ export class SapClient {
           volumePerBaseUnit,
         };
       });
+    }
+  }
+
+  /** Customer master (read-only): name and GST number, used to link a dealer's several SAP accounts. */
+  async *customers(): AsyncGenerator<SapCustomer[]> {
+    const params = { $select: "Customer,CustomerName,CustomerFullName,TaxNumber3,CreationDate,DeletionIndicator" };
+    for await (const page of this.pages("API_BUSINESS_PARTNER/A_Customer", params, 5000)) {
+      yield page.map((c) => ({
+        customer: padCustomer(str(c.Customer))!,
+        name: str(c.CustomerName),
+        fullName: str(c.CustomerFullName),
+        gstin: str(c.TaxNumber3)?.toUpperCase() ?? null,
+        postalCode: str(c.CustomerFullName)?.match(/\/\s*(\d{6})\b/)?.[1] ?? null,
+        createdOn: odataDate(c.CreationDate)?.toISOString().slice(0, 10) ?? null,
+        deleted: c.DeletionIndicator ? 1 : 0,
+      }));
     }
   }
 

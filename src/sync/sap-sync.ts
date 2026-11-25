@@ -1,4 +1,4 @@
-// SAP sync: billing lines (incremental) + material master (weekly) -> sap_sales_monthly.
+// SAP sync: billing lines (incremental) + material and customer master (weekly) -> sap_sales_monthly.
 //
 // Incremental rule: fetch documents changed since the last successful sync, PLUS re-read every document
 // with a billing date in the last SAP_RECHECK_MONTHS months (catches corrections the change stamp misses).
@@ -51,6 +51,23 @@ export async function syncSap(opts: { full?: boolean; forceMaterials?: boolean }
       log.info(`[sap] materials: ${materials}`);
     }
 
+    // 1b) Customers (weekly): GST number + PIN code, to link a dealer's several accounts. Optional: if the SAP user
+    //     can't read the customer master, sales still work, just without linked accounts.
+    let customers = 0;
+    const lastCust = await getState("sap_customers_synced_at");
+    if (opts.forceMaterials || !lastCust || Date.now() - Date.parse(lastCust) > MATERIAL_MAX_AGE_DAYS * 86_400_000) {
+      try {
+        for await (const page of sap.customers()) {
+          await upsertMany(t.sapCustomer, page.map((c) => ({ ...c, lastSeenAt: startedAt })), t.sapCustomer.customer);
+          customers += page.length;
+        }
+        await setState("sap_customers_synced_at", startedAt);
+        log.info(`[sap] customers: ${customers}`);
+      } catch (e) {
+        log.warn(`[sap] customer master not read (${(e as Error).message.slice(0, 200)}); linked dealer accounts not refreshed`);
+      }
+    }
+
     // 2) Billing lines
     const lastSync = opts.full ? null : await getState("sap_billing_synced_at");
     const windows = lastSync
@@ -75,9 +92,9 @@ export async function syncSap(opts: { full?: boolean; forceMaterials?: boolean }
     await run.finish("ok", {
       rowsRead: lines,
       rowsWritten: agg.rows,
-      message: `${lines} billing lines, ${materials} materials, ${agg.rows} dealer×material×month rows; ${agg.noVolume} lines without m² conversion`,
+      message: `${lines} billing lines, ${materials} materials, ${customers} customers, ${agg.rows} dealer×material×month rows; ${agg.noVolume} lines without m² conversion`,
     });
-    return { skipped: false, lines, materials, ...agg };
+    return { skipped: false, lines, materials, customers, ...agg };
   } catch (e) {
     await run.fail(e);
     throw e;

@@ -8,6 +8,13 @@
       "when": 1795494059644,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1795582739158,
+      "tag": "0001_chubby_lightspeed",
+      "breakpoints": true
     }
   ]
 }

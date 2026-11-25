@@ -49,7 +49,7 @@ describe("SAP description tier", () => {
     { code: "TIGVXXX600X600AA00001", name: "Tropicana Rose", sizeKey: "600x600", source: "sap" },
     { code: "TIGVXXX600X600AA00002", name: "Tropicana Rose", sizeKey: "300x600", source: "sap" },
     { code: "TIGVXXX600X600AA00003", name: "Twin Name", sizeKey: "600x600", source: "sap" },
-    { code: "TIGVXXX600X600AA00004", name: "Twin Name", sizeKey: "600x600", source: "sap" },
+    { code: "TIGVYYY600X600AA00004", name: "Twin Name", sizeKey: "600x600", source: "sap" },
   ];
   const sapByName = new Map<string, Candidate[]>();
   for (const c of sap) sapByName.set(designKey(c.name), [...(sapByName.get(designKey(c.name)) ?? []), c]);
@@ -78,7 +78,29 @@ describe("SAP description tier", () => {
     expect(matchDesign("red oak", "200x1000", [plank], by, new Map()).status).toBe("auto"); // RMI's label
     expect(matchDesign("red oak", "600x600", [plank], by, new Map()).method).toBe("size_mismatch");
   });
-  it("two SAP codes with the same name and size -> needs review", () => {
+  it("two SAP codes with the same name and size (not packaging twins) -> needs review", () => {
     expect(matchDesign("twin name", "600x600", catalog, byName, sapByName)).toMatchObject({ method: "ambiguous", status: "needs_review" });
+  });
+});
+
+describe("packaging variants in design matching", () => {
+  it("several codes that are packaging twins are linked automatically", () => {
+    const twins: Candidate[] = [
+      { code: "TIGVIBR1200X600NOMA03031", name: "Paleo Slate", sizeKey: "600x1200", source: "rmi" },
+      { code: "TIGVIBR1200X600NOMA02057", name: "Paleo Slate", sizeKey: "600x1200", source: "rmi" },
+    ];
+    const idx = new Map([[designKey("Paleo Slate"), twins]]);
+    const m = matchDesign("paleo slate", "600x1200", twins, idx);
+    expect(m.status).toBe("auto");
+    expect(m.method).toBe("packaging_variants");
+    expect(m.materialCode).toBe("TIGVIBR1200X600NOMA02057");
+  });
+  it("codes that differ in more than the serial still need review", () => {
+    const c: Candidate[] = [
+      { code: "TIDCDTL600X600NOGL04024", name: "Tropicana Sand", sizeKey: "600x600", source: "rmi" },
+      { code: "TIDCDTM600X600NOGL04003", name: "Tropicana Sand", sizeKey: "600x600", source: "rmi" },
+    ];
+    const m = matchDesign("tropicana sand", "600x600", c, new Map([[designKey("Tropicana Sand"), c]]));
+    expect(m.status).toBe("needs_review");
   });
 });

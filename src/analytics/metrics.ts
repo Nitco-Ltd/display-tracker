@@ -33,7 +33,7 @@ function at(r: DisplayWithSales, offset: number, cur: string) {
 }
 
 const isLinked = (r: DisplayWithSales) => !!r.materialCode && r.mapStatus === "mapped";
-const pairKey = (r: DisplayWithSales) => `${r.dealerCode}|${r.materialCode}|${r.cohortMonth}`;
+const pairKey = (r: DisplayWithSales) => `${r.dealerGroup ?? r.dealerCode}|${r.salesFamily ?? r.materialCode}|${r.cohortMonth}`;
 
 export function isMeasurable(r: DisplayWithSales, cur: string): boolean {
   return isLinked(r) && !!r.cohortMonth && addMonths(r.cohortMonth, 1) <= cur;
@@ -71,7 +71,7 @@ export function afterSalesTotal(rows: DisplayWithSales[], cur: string): { value:
   for (const r of rows) {
     if (!isLinked(r)) continue;
     for (const s of afterMonths(r, cur)) {
-      const k = `${r.dealerCode}|${r.materialCode}|${s.month}`;
+      const k = `${r.dealerGroup ?? r.dealerCode}|${r.salesFamily ?? r.materialCode}|${s.month}`;
       if (seen.has(k)) continue;
       seen.add(k);
       value += s.value;

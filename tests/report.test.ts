@@ -73,7 +73,7 @@ describe("months that haven't started are left out", () => {
     const { buildWorkbook } = await import("@/report/excel");
     const { windowMonths, reportAverages } = await import("@/sales/window");
     const sales = windowMonths("2026-09").map((m, i) => ({ month: m, volume: i, value: i * 10 }));
-    const row = { refNo: "X/1", cohortMonth: "2026-09", sales, ...reportAverages(sales) } as never;
+    const row = { refNo: "X/1", cohortMonth: "2026-09", salesAccounts: [], salesCodes: [], otherAccountValue: 0, sales, ...reportAverages(sales) } as never;
     const wb = buildWorkbook("2026-09", [row], "2026-11");
     const buf = Buffer.from(await wb.xlsx.writeBuffer());
     const ws = await readBack(buf);

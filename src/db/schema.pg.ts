@@ -141,6 +141,18 @@ export const sapMaterial = pgTable("sap_material", {
   lastSeenAt: text("last_seen_at").notNull(),
 });
 
+// SAP customer master (name, GST number, PIN code), used to link a dealer's several SAP accounts (see src/sales/dealers.ts).
+export const sapCustomer = pgTable("sap_customer", {
+  customer: text("customer").primaryKey(), // 10 digits
+  name: text("name"),
+  fullName: text("full_name"),
+  gstin: text("gstin"),
+  postalCode: text("postal_code"),
+  createdOn: text("created_on"),
+  deleted: integer("deleted").notNull().default(0),
+  lastSeenAt: text("last_seen_at").notNull(),
+});
+
 export const sapSalesMonthly = pgTable(
   "sap_sales_monthly",
   {

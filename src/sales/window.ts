@@ -2,6 +2,8 @@
 // month −1 (before display) … month +12 after the display month = 14 months.
 import { and, asc, eq, inArray, type SQL } from "drizzle-orm";
 import { getDb, tables } from "@/db/client";
+import { linkedAccounts } from "./dealers";
+import { packagingFamilyKey } from "./packaging";
 
 export const WINDOW_BEFORE = 1;
 export const WINDOW_AFTER = 12;
@@ -37,6 +39,12 @@ export interface MonthSales {
 export type DisplayRow = typeof import("@/db/schema.sqlite").rmiDisplay.$inferSelect;
 
 export interface DisplayWithSales extends DisplayRow {
+  salesFamily: string | null; // packaging-variant family of materialCode (see packagingFamilyKey); dedupe key for metrics
+  salesCodes: string[]; // every SAP code whose sales count for this display (materialCode + its packaging variants)
+  dealerGroup: string | null; // the dealer's linked accounts joined by "+" (or dealerCode); dedupe key for metrics
+  salesAccounts: string[]; // every SAP customer account whose sales count (dealerCode + linked accounts, see dealers.ts)
+  otherAccountValue: number; // part of the 14-month sales billed to a linked account rather than dealerCode
+  otherAccountVolume: number;
   sales: MonthSales[]; // always WINDOW_MONTHS entries, zeros where no sales
   avgVolume: number; // report rule: sum of 14 months ÷ 14
   avgValue: number;
@@ -52,6 +60,24 @@ export function reportAverages(sales: { volume: number; value: number }[]): { av
   return { avgVolume: +(sumV / WINDOW_MONTHS).toFixed(3), avgValue: +(sumR / WINDOW_MONTHS).toFixed(3) };
 }
 
+export { packagingFamilyKey };
+
+/** material code -> all codes in its packaging family (only codes with a family of 2+ are listed). */
+export async function packagingFamilies(): Promise<{ familyOf: Map<string, string>; codesOf: Map<string, string[]> }> {
+  const t = tables();
+  const mats = await getDb().select({ code: t.sapMaterial.material, description: t.sapMaterial.description }).from(t.sapMaterial);
+  const codesOf = new Map<string, string[]>();
+  const familyOf = new Map<string, string>();
+  for (const m of mats) {
+    const k = packagingFamilyKey(m.code, m.description);
+    if (k === m.code) continue;
+    familyOf.set(m.code, k);
+    (codesOf.get(k) ?? codesOf.set(k, []).get(k)!).push(m.code);
+  }
+  for (const codes of codesOf.values()) codes.sort();
+  return { familyOf, codesOf };
+}
+
 export async function displaysWithSales(where?: SQL): Promise<DisplayWithSales[]> {
   const db = getDb();
   const t = tables();
@@ -61,8 +87,10 @@ export async function displaysWithSales(where?: SQL): Promise<DisplayWithSales[]
     .where(where ? and(eq(t.rmiDisplay.inSource, 1), where) : eq(t.rmiDisplay.inSource, 1))
     .orderBy(asc(t.rmiDisplay.displayTrackerId), asc(t.rmiDisplay.refNo)); // RMI's own order (record id)
 
-  // Fetch sales only for the dealers involved.
-  const dealers = [...new Set(rows.map((r) => r.dealerCode).filter(Boolean))] as string[];
+  // Fetch sales only for the dealers involved (and their linked accounts).
+  const links = await linkedAccounts();
+  const accountsOf = (d: string | null) => (d ? (links.get(d) ?? [d]) : []);
+  const dealers = [...new Set(rows.flatMap((r) => accountsOf(r.dealerCode)))];
   const salesMap = new Map<string, { volume: number; value: number }>();
   for (let i = 0; i < dealers.length; i += 500) {
     const chunk = dealers.slice(i, i + 500);
@@ -71,12 +99,42 @@ export async function displaysWithSales(where?: SQL): Promise<DisplayWithSales[]
     }
   }
 
+  const { familyOf, codesOf } = await packagingFamilies();
+
   return rows.map((r) => {
+    const fam = r.materialCode ? familyOf.get(r.materialCode) : undefined;
+    const salesCodes = r.materialCode ? (fam ? codesOf.get(fam)! : [r.materialCode]) : [];
+    const salesAccounts = accountsOf(r.dealerCode);
     const months = r.cohortMonth ? windowMonths(r.cohortMonth) : [];
+    let otherAccountValue = 0;
+    let otherAccountVolume = 0;
     const sales = months.map((m) => {
-      const s = r.dealerCode && r.materialCode ? salesMap.get(`${r.dealerCode}|${r.materialCode}|${m}`) : undefined;
-      return { month: m, volume: s?.volume ?? 0, value: s?.value ?? 0 };
+      let volume = 0;
+      let value = 0;
+      for (const a of salesAccounts) {
+        for (const c of salesCodes) {
+          const s = salesMap.get(`${a}|${c}|${m}`);
+          if (!s) continue;
+          volume += s.volume;
+          value += s.value;
+          if (a !== r.dealerCode) {
+            otherAccountValue += s.value;
+            otherAccountVolume += s.volume;
+          }
+        }
+      }
+      return { month: m, volume, value };
     });
-    return { ...r, sales, ...reportAverages(sales) };
+    return {
+      ...r,
+      salesFamily: fam ?? r.materialCode,
+      salesCodes,
+      dealerGroup: salesAccounts.length ? salesAccounts.join("+") : r.dealerCode,
+      salesAccounts,
+      otherAccountValue,
+      otherAccountVolume,
+      sales,
+      ...reportAverages(sales),
+    };
   });
 }

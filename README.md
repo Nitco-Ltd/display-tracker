@@ -175,7 +175,9 @@ Run these in Command Prompt in the project folder.
 
 Cancelled invoices are ignored. Month = invoice date. Value = net amount, **before GST**. Volume = **m²**, converted from boxes using each tile's conversion in SAP (e.g. 1 box of 600×1200 = 1.44 m²).
 
-**Design → SAP material.** Each display counts sales of **one** SAP material: its design's own code. Variants of the same design (e.g. "(PO)", "(HW)", "(RPO)") are not added. RMI only stores the design name. The app links it to a SAP material automatically when the name (and, if needed, the size) points to exactly one product; otherwise it goes to **Design review**. Displays with a blank design in RMI can't get sales.
+**Design → SAP material.** Each display counts sales of its design's own SAP code **plus that code's packaging variants**. When only the packaging changes, NITCO gives the tile a new code (e.g. Oyster Blue Onyx `TIGVMPL1200X600NOGL02160` → `…NOGL03021`). The app treats codes as packaging variants when they are identical except for the trailing serial number (e.g. `02160`, `03021`, `0301`) and have the same design name in SAP. A design whose only candidates are packaging variants of each other is linked automatically instead of going to Design review. Codes that differ anywhere else (e.g. `DCH` vs `DTL`, `NO` vs `MH`) are not added, and neither are name variants such as "(PO)", "(HW)" or "(RPO)". RMI only stores the design name. The app links it to a SAP material automatically when the name (and, if needed, the size) points to exactly one product; otherwise it goes to **Design review**. Displays with a blank design in RMI can't get sales.
+
+**Dealer → SAP accounts.** Many dealers have more than one SAP account (e.g. a normal account plus a Project Dealer account), and invoices go to either. A display counts sales on **all of the dealer's accounts**: SAP accounts with the **same GST number and the same PIN code** are treated as one dealer (from SAP's customer master, refreshed weekly). NITCO's own accounts (depots, Le Studio) are never linked. The Excel report's second sheet, *How sales were matched*, lists for every row which accounts and design codes were counted and how much came from the linked accounts.
 
 **Dashboard rules.**
 
@@ -212,7 +214,7 @@ First look at the **red banner** on the dashboard or the end of `logs\daily-YYYY
 | `server certificate not trusted` / `CERT_HAS_EXPIRED` | SAP's security certificate changed. Run `npm run sap:cert`, confirm the SHA-256 fingerprint with IT, then `npm run sap:cert -- --save`. |
 | `… is open in Excel (or locked). Close it and run again.` | A report file is open. Close it in Excel; the next run (or Refresh now) rewrites it. |
 | `SAP not configured yet` (amber) | `SAP_ODATA_BASE_URL` is blank in `.env`. |
-| Dashboard shows **0** sales for a display | Its design is blank in RMI or waiting in **Design review**, or the dealer simply hasn't bought it. The **Displays** page shows the SAP material (or why there is none) in the last column. |
+| Dashboard shows **0** sales for a display | Its design is blank in RMI or waiting in **Design review**, or the dealer simply hasn't bought it. Purchases on the dealer's other SAP accounts are counted only when SAP has the same GST number and PIN code on both. The **Displays** page shows the SAP material (or why there is none) in the last column. |
 | `npm` says EACCES / root-owned cache (Mac) | Run once in Terminal: `sudo chown -R $(id -u):$(id -g) ~/.npm` |
 
 <a id="rmi-app-key"></a>**Finding RMI_APP_KEY.** Open <https://rmi.nitco.in> in Chrome, press F12, open the **Sources** tab, select the page `(index)`, and search (Ctrl+F) for `Authtoken`. The value in quotes after it is the key. It is the same for every RMI user.

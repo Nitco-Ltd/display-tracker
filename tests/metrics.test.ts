@@ -61,3 +61,23 @@ describe("dashboard metrics", () => {
     expect(zeroSales([a, b, c, u, fresh], 3, CUR).map((r) => r.refNo)).toEqual(["C"]);
   });
 });
+
+describe("packaging variants in metrics", () => {
+  it("two displays of the same design under old and new packaging codes count once", () => {
+    const fam = "TIGVMPL1200X600NOGL|oyster blue onyx";
+    const a = row("A", "2026-08", { "2026-09": 1000 }, { materialCode: "TIGVMPL1200X600NOGL02160", salesFamily: fam });
+    const b = row("B", "2026-08", { "2026-09": 1000 }, { materialCode: "TIGVMPL1200X600NOGL03021", salesFamily: fam });
+    expect(uniquePairs([a, b])).toHaveLength(1);
+    expect(afterSalesTotal([a, b], CUR).value).toBe(1000);
+  });
+});
+
+describe("linked dealer accounts in metrics", () => {
+  it("two displays recorded under a dealer's two accounts count once", () => {
+    const g = "0011002222+0011007639";
+    const a = row("A", "2026-08", { "2026-09": 500 }, { dealerCode: "0011002222", dealerGroup: g });
+    const b = row("B", "2026-08", { "2026-09": 500 }, { dealerCode: "0011007639", dealerGroup: g });
+    expect(uniquePairs([a, b])).toHaveLength(1);
+    expect(afterSalesTotal([a, b], CUR).value).toBe(500);
+  });
+});
