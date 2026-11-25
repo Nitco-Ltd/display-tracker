@@ -45,6 +45,8 @@ export interface DisplayWithSales extends DisplayRow {
   salesAccounts: string[]; // every SAP customer account whose sales count (dealerCode + linked accounts, see dealers.ts)
   otherAccountValue: number; // part of the 14-month sales billed to a linked account rather than dealerCode
   otherAccountVolume: number;
+  extraValue: number; // 14-month value from the undecided types (ZTDN, ZNTI, ZDMS), whether or not included in `sales`
+  includesExtra: boolean; // true when `sales` includes them (the "incl." version)
   sales: MonthSales[]; // always WINDOW_MONTHS entries, zeros where no sales
   avgVolume: number; // report rule: sum of 14 months ÷ 14
   avgValue: number;
@@ -78,7 +80,13 @@ export async function packagingFamilies(): Promise<{ familyOf: Map<string, strin
   return { familyOf, codesOf };
 }
 
-export async function displaysWithSales(where?: SQL): Promise<DisplayWithSales[]> {
+export interface SalesOptions {
+  /** Also count the undecided invoice types ZTDN, ZNTI, ZDMS (SAP_EXTRA_*). Default: no. */
+  includeExtra?: boolean;
+}
+
+export async function displaysWithSales(where?: SQL, opts: SalesOptions = {}): Promise<DisplayWithSales[]> {
+  const includeExtra = !!opts.includeExtra;
   const db = getDb();
   const t = tables();
   const rows = await db
@@ -91,11 +99,11 @@ export async function displaysWithSales(where?: SQL): Promise<DisplayWithSales[]
   const links = await linkedAccounts();
   const accountsOf = (d: string | null) => (d ? (links.get(d) ?? [d]) : []);
   const dealers = [...new Set(rows.flatMap((r) => accountsOf(r.dealerCode)))];
-  const salesMap = new Map<string, { volume: number; value: number }>();
+  const salesMap = new Map<string, { volume: number; value: number; extraVolume: number; extraValue: number }>();
   for (let i = 0; i < dealers.length; i += 500) {
     const chunk = dealers.slice(i, i + 500);
     for (const s of await db.select().from(t.sapSalesMonthly).where(inArray(t.sapSalesMonthly.dealerCode, chunk))) {
-      salesMap.set(`${s.dealerCode}|${s.materialCode}|${s.month}`, { volume: s.volume, value: s.value });
+      salesMap.set(`${s.dealerCode}|${s.materialCode}|${s.month}`, { volume: s.volume, value: s.value, extraVolume: s.extraVolume, extraValue: s.extraValue });
     }
   }
 
@@ -108,6 +116,7 @@ export async function displaysWithSales(where?: SQL): Promise<DisplayWithSales[]
     const months = r.cohortMonth ? windowMonths(r.cohortMonth) : [];
     let otherAccountValue = 0;
     let otherAccountVolume = 0;
+    let extraValue = 0;
     const sales = months.map((m) => {
       let volume = 0;
       let value = 0;
@@ -115,11 +124,14 @@ export async function displaysWithSales(where?: SQL): Promise<DisplayWithSales[]
         for (const c of salesCodes) {
           const s = salesMap.get(`${a}|${c}|${m}`);
           if (!s) continue;
-          volume += s.volume;
-          value += s.value;
+          const v = s.volume + (includeExtra ? s.extraVolume : 0);
+          const val = s.value + (includeExtra ? s.extraValue : 0);
+          volume += v;
+          value += val;
+          extraValue += s.extraValue;
           if (a !== r.dealerCode) {
-            otherAccountValue += s.value;
-            otherAccountVolume += s.volume;
+            otherAccountValue += val;
+            otherAccountVolume += v;
           }
         }
       }
@@ -133,6 +145,8 @@ export async function displaysWithSales(where?: SQL): Promise<DisplayWithSales[]
       salesAccounts,
       otherAccountValue,
       otherAccountVolume,
+      extraValue,
+      includesExtra: includeExtra,
       sales,
       ...reportAverages(sales),
     };

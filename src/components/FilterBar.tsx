@@ -46,6 +46,16 @@ export function FilterBar({ options, extra }: { options: FilterOptions; extra?: 
         {fields.map(([p, label, opts]) => (
           <MultiSelect key={p} label={label} options={opts} selected={get(p)} onChange={(v) => set(p, v)} />
         ))}
+        <MultiSelect
+          single
+          label="Sales counted"
+          options={[
+            { value: "excl", label: "Without ZTDN, ZNTI, ZDMS" },
+            { value: "incl", label: "With ZTDN, ZNTI, ZDMS" },
+          ]}
+          selected={get("sales").length ? get("sales") : ["excl"]}
+          onChange={(v) => set("sales", v.includes("incl") ? ["incl"] : [])}
+        />
         {extra}
       </div>
       {any && (

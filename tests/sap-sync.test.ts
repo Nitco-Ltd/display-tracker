@@ -7,6 +7,8 @@ process.env.SAP_PASS = "secret";
 process.env.SAP_SALES_DOC_TYPES = "F2";
 process.env.SAP_RETURN_DOC_TYPES = "RE";
 process.env.SAP_VALUE_ONLY_DOC_TYPES = "ZCPD";
+process.env.SAP_EXTRA_DOC_TYPES = "ZNTI";
+process.env.SAP_EXTRA_VALUE_ONLY_DOC_TYPES = "ZTDN";
 
 const d = (iso: string) => `/Date(${Date.parse(iso)})/`;
 const doc = (no: string, type: string, date: string, soldTo: string, items: object[], cancelled = false) => ({
@@ -42,6 +44,13 @@ const billing = [
   doc("9000004", "F2", "2026-09-21", "0011000111", [item("10", MAT, 999, 999999)], true), // cancelled
   doc("9000005", "S1", "2026-09-22", "0011000111", [item("10", MAT, 999, 999999)]), // cancellation doc
   doc("9000006", "ZCPD", "2026-09-25", "0011000111", [item("10", MAT, 50, 1000)]), // rate-difference credit: value only
+  doc("9000007", "ZNTI", "2026-09-26", "0011000111", [item("10", MAT, 5, 2500)]), // undecided type: kept apart
+  doc("9000008", "ZTDN", "2026-09-27", "0011000111", [item("10", MAT, 5, 300)]), // undecided debit note: value only
+  doc("9000009", "F2", "2026-10-02", "11000222", [item("10", MAT, 10, 4000)]), // the dealer's second account
+];
+const customers = [
+  { Customer: "11000111", CustomerName: "Test Tiles", CustomerFullName: "Company Test Tiles/846004 DARBHANGA", TaxNumber3: "10COSPP0792L1ZG", CreationDate: d("2022-01-01"), DeletionIndicator: false },
+  { Customer: "11000222", CustomerName: "Test Tiles", CustomerFullName: "Company Test Tiles/846004 Darbhanga", TaxNumber3: "10COSPP0792L1ZG", CreationDate: d("2026-08-27"), DeletionIndicator: false },
 ];
 const products = [
   {
@@ -60,7 +69,7 @@ const methods: string[] = [];
 beforeAll(() => {
   vi.stubGlobal("fetch", async (url: string, init?: RequestInit) => {
     methods.push(init?.method ?? "GET");
-    const results = url.includes("A_Product") ? products : url.includes("A_BillingDocument") ? billing : [];
+    const results = url.includes("A_Product") ? products : url.includes("A_BillingDocument") ? billing : url.includes("A_Customer") ? customers : [];
     return new Response(JSON.stringify({ d: { results } }), { status: 200, headers: { "content-type": "application/json" } });
   });
 });
@@ -77,12 +86,15 @@ describe("SAP sync (fixture)", () => {
     expect(r.skipped).toBe(false);
 
     const rows = await getDb().select().from(tables().sapSalesMonthly);
-    const byMonth = Object.fromEntries(rows.map((x) => [x.month, x]));
-    expect(Object.keys(byMonth).sort()).toEqual(["2026-08", "2026-09"]);
-    expect(byMonth["2026-08"]).toMatchObject({ dealerCode: "0011000111", materialCode: MAT, volume: 144, value: 50000 });
+    const own = rows.filter((x) => x.dealerCode === "0011000111");
+    const byMonthOwn = Object.fromEntries(own.map((x) => [x.month, x]));
+    expect(Object.keys(byMonthOwn).sort()).toEqual(["2026-08", "2026-09"]);
+    expect(byMonthOwn["2026-08"]).toMatchObject({ dealerCode: "0011000111", materialCode: MAT, volume: 144, value: 50000 });
     // Sep: 50 boxes sale − 10 boxes return = 40 boxes = 57.6 m²; ₹1,000 rate credit reduces value only;
     // cancelled invoice + S1 cancellation ignored
-    expect(byMonth["2026-09"]).toMatchObject({ volume: 57.6, value: 19000, lineCount: 3 });
+    expect(byMonthOwn["2026-09"]).toMatchObject({ volume: 57.6, value: 19000, lineCount: 3 });
+    // ZNTI (5 boxes, ₹2,500) and ZTDN (₹300, value only) are kept apart
+    expect(byMonthOwn["2026-09"]).toMatchObject({ extraVolume: 7.2, extraValue: 2800 });
   });
 
   it("joins sales onto a display row over the 14-month window", async () => {
@@ -105,7 +117,16 @@ describe("SAP sync (fixture)", () => {
     expect(row.sales).toHaveLength(14);
     expect(row.sales[1]).toMatchObject({ month: "2026-08", volume: 144, value: 50000 });
     expect(row.sales[2]).toMatchObject({ month: "2026-09", volume: 57.6, value: 19000 });
-    expect(row.avgValue).toBeCloseTo(69000 / 14, 3);
+    // Oct: bought on the dealer's second account (same GST number and PIN code)
+    expect(row.salesAccounts).toEqual(["0011000111", "0011000222"]);
+    expect(row.sales[3]).toMatchObject({ month: "2026-10", value: 4000 });
+    expect(row.otherAccountValue).toBe(4000);
+    expect(row.avgValue).toBeCloseTo(73000 / 14, 3);
+    expect(row.extraValue).toBe(2800);
+
+    const [incl] = await displaysWithSales(undefined, { includeExtra: true });
+    expect(incl.sales[2]).toMatchObject({ month: "2026-09", value: 21800 });
+    expect(incl.avgValue).toBeCloseTo(75800 / 14, 3);
   });
 
   it("only ever sends GET requests to SAP", () => {

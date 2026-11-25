@@ -163,6 +163,8 @@ export const sapSalesMonthly = pgTable(
     value: doublePrecision("value").notNull(),
     lineCount: integer("line_count").notNull(),
     volumeIncomplete: integer("volume_incomplete").notNull().default(0),
+    extraVolume: doublePrecision("extra_volume").notNull().default(0), // ZNTI/ZDMS/ZTDN (SAP_EXTRA_*): counted only in the "incl." version
+    extraValue: doublePrecision("extra_value").notNull().default(0),
     updatedAt: text("updated_at").notNull(),
   },
   (t) => [primaryKey({ columns: [t.dealerCode, t.materialCode, t.month] })],

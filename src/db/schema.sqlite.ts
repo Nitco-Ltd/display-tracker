@@ -166,6 +166,8 @@ export const sapSalesMonthly = sqliteTable(
     value: real("value").notNull(), // INR net
     lineCount: integer("line_count").notNull(),
     volumeIncomplete: integer("volume_incomplete").notNull().default(0), // 1 if some lines lacked a unit conversion
+    extraVolume: real("extra_volume").notNull().default(0), // ZNTI/ZDMS/ZTDN (SAP_EXTRA_*): counted only in the "incl." version
+    extraValue: real("extra_value").notNull().default(0),
     updatedAt: text("updated_at").notNull(),
   },
   (t) => [primaryKey({ columns: [t.dealerCode, t.materialCode, t.month] })],

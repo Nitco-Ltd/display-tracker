@@ -19,14 +19,20 @@ export async function openCohorts(now = new Date()): Promise<string[]> {
   const t = tables();
   const cur = currentMonth(now);
   const first = addMonths(cur, -WINDOW_AFTER);
-  const rows = await getDb().selectDistinct({ m: t.rmiDisplay.cohortMonth }).from(t.rmiDisplay).where(isNotNull(t.rmiDisplay.cohortMonth));
+  const rows = await getDb()
+    .selectDistinct({ m: t.rmiDisplay.cohortMonth })
+    .from(t.rmiDisplay)
+    .where(isNotNull(t.rmiDisplay.cohortMonth));
   return rows
     .map((r) => r.m!)
     .filter((m) => m >= first && m <= cur)
     .sort();
 }
 
-export async function writeReports(months: string[], outDir = config().REPORT_OUTPUT_DIR) {
+export async function writeReports(
+  months: string[],
+  outDir = config().REPORT_OUTPUT_DIR,
+) {
   await ensureSchema();
   const run = await startRun("report");
   const dir = resolve(outDir);
@@ -34,23 +40,37 @@ export async function writeReports(months: string[], outDir = config().REPORT_OU
   try {
     mkdirSync(dir, { recursive: true });
     for (const m of months) {
-      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(m)) throw new Error(`Invalid month "${m}" — use YYYY-MM, e.g. 2026-08`);
-      const { buffer, rows } = await buildReportBuffer(m);
-      const file = join(dir, reportFileName(m));
-      const tmp = `${file}.tmp`;
-      writeFileSync(tmp, buffer);
-      try {
-        renameSync(tmp, file); // atomic: synced folders never see a half-written file
-      } catch (e) {
-        rmSync(tmp, { force: true });
-        const code = (e as NodeJS.ErrnoException).code;
-        if (code === "EBUSY" || code === "EPERM") throw new Error(`${file} is open in Excel (or locked). Close it and run again.`);
-        throw e;
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(m))
+        throw new Error(`Invalid month "${m}" — use YYYY-MM, e.g. 2026-08`);
+      for (const includeExtra of [false, true]) {
+        // Two versions: current sales rule, and the same plus ZTDN, ZNTI, ZDMS invoices (not decided yet).
+        const { buffer, rows } = await buildReportBuffer(m, {}, undefined, {
+          includeExtra,
+        });
+        const file = join(dir, reportFileName(m, { includeExtra }));
+        const tmp = `${file}.tmp`;
+        writeFileSync(tmp, buffer);
+        try {
+          renameSync(tmp, file); // atomic: synced folders never see a half-written file
+        } catch (e) {
+          rmSync(tmp, { force: true });
+          const code = (e as NodeJS.ErrnoException).code;
+          if (code === "EBUSY" || code === "EPERM")
+            throw new Error(
+              `${file} is open in Excel (or locked). Close it and run again.`,
+            );
+          throw e;
+        }
+        written.push({ month: m, file, rows });
+        log.info(
+          `[report] ${reportFileName(m, { includeExtra })}: ${rows} rows`,
+        );
       }
-      written.push({ month: m, file, rows });
-      log.info(`[report] ${reportFileName(m)}: ${rows} rows`);
     }
-    await run.finish("ok", { rowsWritten: written.reduce((a, w) => a + w.rows, 0), message: `${written.length} report(s) in ${dir}` });
+    await run.finish("ok", {
+      rowsWritten: written.reduce((a, w) => a + w.rows, 0),
+      message: `${written.length} report(s) in ${dir}`,
+    });
     return written;
   } catch (e) {
     await run.fail(e);

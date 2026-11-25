@@ -8,6 +8,8 @@
 //   - document type in SAP_SALES_DOC_TYPES  -> +quantity, +value
 //   - document type in SAP_RETURN_DOC_TYPES -> −quantity, −value
 //   - document type in SAP_VALUE_ONLY_DOC_TYPES -> −value only (rate-difference / claim credit notes)
+//   - document type in SAP_EXTRA_DOC_TYPES / SAP_EXTRA_VALUE_ONLY_DOC_TYPES (ZNTI, ZDMS / ZTDN; undecided) -> kept apart in
+//     extra_volume / extra_value, added only for the "incl. ZTDN, ZNTI, ZDMS" version of reports and dashboard
 //   - cancelled documents and every other type (cancellations S1/S2, pro forma, …) -> ignored
 //   - month = billing date; value = NetAmount (net of tax); volume converted to SAP_VOLUME_UNIT (m²)
 import { config, csv } from "@/lib/config";
@@ -107,15 +109,19 @@ export async function rebuildMonthlySales(): Promise<{ rows: number; noVolume: n
   const sales = new Set(csv(config().SAP_SALES_DOC_TYPES));
   const returns = new Set(csv(config().SAP_RETURN_DOC_TYPES));
   const valueOnly = new Set(csv(config().SAP_VALUE_ONLY_DOC_TYPES));
+  const extra = new Set(csv(config().SAP_EXTRA_DOC_TYPES));
+  const extraValueOnly = new Set(csv(config().SAP_EXTRA_VALUE_ONLY_DOC_TYPES));
   const volUnit = config().SAP_VOLUME_UNIT.toUpperCase();
   const conv = new Map((await db.select().from(t.sapMaterial)).map((m) => [m.material, m.volumePerBaseUnit]));
 
-  const acc = new Map<string, { dealerCode: string; materialCode: string; month: string; volume: number; value: number; lineCount: number; volumeIncomplete: number }>();
+  type Acc = { dealerCode: string; materialCode: string; month: string; volume: number; value: number; extraVolume: number; extraValue: number; lineCount: number; volumeIncomplete: number };
+  const acc = new Map<string, Acc>();
   let noVolume = 0;
   for (const l of await db.select().from(t.sapBillingItem)) {
     if (l.isCancelled || !l.soldTo || !l.material || !l.billingDate || !l.docType) continue;
-    const isValueOnly = valueOnly.has(l.docType);
-    const sign = sales.has(l.docType) ? 1 : returns.has(l.docType) || isValueOnly ? -1 : 0;
+    const isExtra = extra.has(l.docType) || extraValueOnly.has(l.docType);
+    const isValueOnly = valueOnly.has(l.docType) || extraValueOnly.has(l.docType);
+    const sign = sales.has(l.docType) || isExtra ? 1 : returns.has(l.docType) || isValueOnly ? -1 : 0;
     if (!sign) continue;
     let vol: number | null = null;
     if (isValueOnly) vol = 0;
@@ -123,15 +129,27 @@ export async function rebuildMonthlySales(): Promise<{ rows: number; noVolume: n
     else if (l.quantityBase !== null && conv.get(l.material)) vol = l.quantityBase * conv.get(l.material)!;
     if (vol === null) noVolume++;
     const key = `${l.soldTo}|${l.material}|${l.billingDate.slice(0, 7)}`;
-    const a = acc.get(key) ?? { dealerCode: l.soldTo, materialCode: l.material, month: l.billingDate.slice(0, 7), volume: 0, value: 0, lineCount: 0, volumeIncomplete: 0 };
-    a.volume += sign * (vol ?? 0);
-    a.value += sign * (l.netAmount ?? 0);
-    a.lineCount++;
-    if (vol === null) a.volumeIncomplete = 1;
+    const a = acc.get(key) ?? { dealerCode: l.soldTo, materialCode: l.material, month: l.billingDate.slice(0, 7), volume: 0, value: 0, extraVolume: 0, extraValue: 0, lineCount: 0, volumeIncomplete: 0 };
+    if (isExtra) {
+      a.extraVolume += sign * (vol ?? 0);
+      a.extraValue += sign * (l.netAmount ?? 0);
+    } else {
+      a.volume += sign * (vol ?? 0);
+      a.value += sign * (l.netAmount ?? 0);
+      a.lineCount++;
+      if (vol === null) a.volumeIncomplete = 1;
+    }
     acc.set(key, a);
   }
   const now = nowIso();
-  const rows = [...acc.values()].map((a) => ({ ...a, volume: +a.volume.toFixed(3), value: +a.value.toFixed(3), updatedAt: now }));
+  const rows = [...acc.values()].map((a) => ({
+    ...a,
+    volume: +a.volume.toFixed(3),
+    value: +a.value.toFixed(3),
+    extraVolume: +a.extraVolume.toFixed(3),
+    extraValue: +a.extraValue.toFixed(3),
+    updatedAt: now,
+  }));
   await db.transaction(async (tx) => {
     await tx.delete(t.sapSalesMonthly);
     for (let i = 0; i < rows.length; i += 500) await tx.insert(t.sapSalesMonthly).values(rows.slice(i, i + 500));

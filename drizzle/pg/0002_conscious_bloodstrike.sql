@@ -1,0 +1,2 @@
+ALTER TABLE "sap_sales_monthly" ADD COLUMN "extra_volume" double precision DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE "sap_sales_monthly" ADD COLUMN "extra_value" double precision DEFAULT 0 NOT NULL;

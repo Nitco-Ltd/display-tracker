@@ -104,3 +104,29 @@ describe("packaging variants in design matching", () => {
     expect(m.status).toBe("needs_review");
   });
 });
+
+import { decideBySales, type MatchResult } from "@/sync/design-match";
+
+describe("settling review items from SAP sales", () => {
+  const a: Candidate = { code: "TIDCDTL600X600NOGL04017", name: "Tropicana Rose", sizeKey: "600x600", source: "rmi" };
+  const b: Candidate = { code: "TIDCULC600X600MHGL04002", name: "Tropicana Rose", sizeKey: "600x600", source: "rmi" };
+  const open: MatchResult = { materialCode: null, materialName: null, method: "ambiguous", confidence: 0, status: "needs_review", candidates: [a, b] };
+  const ev = (sales: Record<string, { dealerCode: string; month: string }[]>) => ({
+    displayAccounts: new Set(["0011000001"]),
+    firstMonth: "2026-04",
+    salesOf: (c: string) => sales[c] ?? [],
+  });
+  it("the displaying dealer bought exactly one candidate -> that one", () => {
+    const m = decideBySales("tropicana rose", "600x600", open, ev({ [a.code]: [{ dealerCode: "0011000001", month: "2026-05" }] }));
+    expect(m).toMatchObject({ materialCode: a.code, method: "dealer_purchases", status: "auto" });
+  });
+  it("dealer bought none, only one candidate still sells -> that one", () => {
+    const m = decideBySales("tropicana rose", "600x600", open, ev({ [b.code]: [{ dealerCode: "0011009999", month: "2026-06" }], [a.code]: [{ dealerCode: "0011009999", month: "2025-06" }] }));
+    expect(m).toMatchObject({ materialCode: b.code, method: "only_one_selling" });
+  });
+  it("dealer bought both, or no evidence -> stays with a person", () => {
+    const both = { [a.code]: [{ dealerCode: "0011000001", month: "2026-05" }], [b.code]: [{ dealerCode: "0011000001", month: "2026-05" }] };
+    expect(decideBySales("tropicana rose", "600x600", open, ev(both))).toBeNull();
+    expect(decideBySales("tropicana rose", "600x600", open, ev({}))).toBeNull();
+  });
+});

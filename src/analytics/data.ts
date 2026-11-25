@@ -38,7 +38,8 @@ export async function loadRows(sp: SearchParams) {
   await ensureSchema();
   const viewer = await getViewer();
   const filter = scopeFilter(viewer, parseFilter(sp));
-  return displaysWithSales(filterWhere(filter));
+  // ?sales=incl -> also count ZTDN, ZNTI, ZDMS invoices (not decided yet whether they are sales).
+  return displaysWithSales(filterWhere(filter), { includeExtra: [sp.sales].flat().includes("incl") });
 }
 
 export interface FilterOptions {

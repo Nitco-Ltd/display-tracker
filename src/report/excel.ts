@@ -2,7 +2,7 @@
 // one sheet "Report" holding one Excel table "Report", columns A–AY, one row per display, in RMI record order.
 // Differences from RMI's file, by design: real numbers and dates (not text), frozen header, widths, number formats.
 import ExcelJS from "exceljs";
-import { displaysWithSales, monthLabel, MONTH_ABBR, WINDOW_MONTHS, windowMonths, type DisplayWithSales } from "@/sales/window";
+import { displaysWithSales, monthLabel, MONTH_ABBR, WINDOW_MONTHS, windowMonths, type DisplayWithSales, type SalesOptions } from "@/sales/window";
 import { filterWhere, type ReportFilter } from "./filters";
 
 /** Columns A–U, in order, with the field that feeds each (original RMI values, not normalized). */
@@ -56,9 +56,9 @@ export function visibleMonths(cohort: string, upTo: string = currentMonth()): st
 }
 
 /** "2026-08" -> "Display_Tracker_Report_-_Aug-2026.xlsx" */
-export function reportFileName(cohort: string): string {
+export function reportFileName(cohort: string, opts: SalesOptions = {}): string {
   const [y, m] = cohort.split("-").map(Number);
-  return `Display_Tracker_Report_-_${MONTH_ABBR[m - 1]}-${y}.xlsx`;
+  return `Display_Tracker_Report_-_${MONTH_ABBR[m - 1]}-${y}${opts.includeExtra ? "_incl_ZTDN_ZNTI_ZDMS" : ""}.xlsx`;
 }
 
 export function buildWorkbook(cohort: string | null, rows: DisplayWithSales[], upTo: string = currentMonth()): ExcelJS.Workbook {
@@ -103,7 +103,16 @@ export function buildWorkbook(cohort: string | null, rows: DisplayWithSales[], u
 
   // Second sheet (the "Report" sheet keeps RMI's exact layout): which SAP accounts and codes each row's sales come from.
   const how = wb.addWorksheet("How sales were matched", { views: [{ state: "frozen", ySplit: 1 }] });
-  how.addRow(["Sequence No", "Dealer Code", "SAP accounts counted", "SAP design codes counted", "Value from linked accounts", "Value, all 14 months"]);
+  const extraIn = rows[0]?.includesExtra ?? false;
+  how.addRow([
+    "Sequence No",
+    "Dealer Code",
+    "SAP accounts counted",
+    "SAP design codes counted",
+    "Value from linked accounts",
+    "Value, all 14 months",
+    extraIn ? "of which ZTDN/ZNTI/ZDMS (included)" : "ZTDN/ZNTI/ZDMS value (NOT included)",
+  ]);
   how.getRow(1).font = { bold: true };
   for (const r of rows) {
     how.addRow([
@@ -113,26 +122,27 @@ export function buildWorkbook(cohort: string | null, rows: DisplayWithSales[], u
       r.salesCodes.length ? r.salesCodes.join(", ") : "(design not linked to SAP)",
       r.otherAccountValue,
       r.sales.reduce((a, s) => a + s.value, 0),
+      r.extraValue ?? 0,
     ]);
   }
-  [16, 12, 26, 52, 16, 16].forEach((w, i) => (how.getColumn(i + 1).width = w));
-  how.getColumn(5).numFmt = "#,##0.00";
-  how.getColumn(6).numFmt = "#,##0.00";
-  how.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 6 } };
+  [16, 12, 26, 52, 16, 16, 22].forEach((w, i) => (how.getColumn(i + 1).width = w));
+  for (const c of [5, 6, 7]) how.getColumn(c).numFmt = "#,##0.00";
+  how.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 7 } };
   return wb;
 }
 
 /** Rows for a cohort month (plus optional extra filters), in RMI record order. */
-export async function reportRows(cohort: string, filter: ReportFilter = {}): Promise<DisplayWithSales[]> {
-  return displaysWithSales(filterWhere({ ...filter, cohortMonths: [cohort] }));
+export async function reportRows(cohort: string, filter: ReportFilter = {}, opts: SalesOptions = {}): Promise<DisplayWithSales[]> {
+  return displaysWithSales(filterWhere({ ...filter, cohortMonths: [cohort] }), opts);
 }
 
 export async function buildReportBuffer(
   cohort: string,
   filter: ReportFilter = {},
   upTo: string = currentMonth(),
+  opts: SalesOptions = {},
 ): Promise<{ buffer: Buffer; rows: number }> {
-  const rows = await reportRows(cohort, filter);
+  const rows = await reportRows(cohort, filter, opts);
   const buffer = Buffer.from(await buildWorkbook(cohort, rows, upTo).xlsx.writeBuffer());
   return { buffer, rows: rows.length };
 }

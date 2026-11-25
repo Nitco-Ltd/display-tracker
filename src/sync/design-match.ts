@@ -10,6 +10,7 @@
 //   4. sap_name_and_size  Not in RMI's catalogue; SAP tile description + size -> one code -> "auto" (used)
 //   5. fuzzy          Similar name (Dice ≥ 0.75), best candidate proposed          -> "needs_review" (NOT used)
 //   6. none           Nothing similar                                               -> "unmapped"
+//   7. Still undecided -> SAP sales evidence (decideBySales): dealer_purchases / only_one_selling -> "auto" (used)
 // Rows with "approved", "manual" or "rejected" status were set by a person and are never overwritten.
 // Sales are attached only for "auto", "approved" and "manual". We never silently guess.
 import { eq } from "drizzle-orm";
@@ -18,6 +19,7 @@ import { upsertMany } from "@/db/upsert";
 import { designKey, normalizeTileSize } from "@/lib/normalize";
 import { nowIso } from "./runs";
 import { packagingFamilyKey } from "@/sales/packaging";
+import { linkedAccounts } from "@/sales/dealers";
 
 export interface Candidate {
   code: string;
@@ -64,7 +66,17 @@ export function similarity(a: string, b: string): number {
 export interface MatchResult {
   materialCode: string | null;
   materialName: string | null;
-  method: "exact_name" | "name_and_size" | "sap_name_and_size" | "packaging_variants" | "size_mismatch" | "ambiguous" | "fuzzy" | "none";
+  method:
+    | "exact_name"
+    | "name_and_size"
+    | "sap_name_and_size"
+    | "packaging_variants"
+    | "dealer_purchases"
+    | "only_one_selling"
+    | "size_mismatch"
+    | "ambiguous"
+    | "fuzzy"
+    | "none";
   confidence: number;
   status: "auto" | "needs_review" | "unmapped";
   candidates: Candidate[];
@@ -125,6 +137,10 @@ export function matchDesign(
     }
     const twin = onePackagingFamily(sized);
     if (twin) return { materialCode: twin.code, materialName: twin.name, method: "packaging_variants", confidence: 0.85, status: "auto", candidates: [] };
+    // RMI left the size blank and SAP has exactly one product with this name: nothing to choose between.
+    if (!sizeKey && sapCodes.length === 1) {
+      return { materialCode: sapCodes[0].code, materialName: sapCodes[0].name, method: "sap_name_and_size", confidence: 0.85, status: "auto", candidates: [] };
+    }
     if (sapCodes.length) {
       return { materialCode: null, materialName: null, method: "ambiguous", confidence: 0, status: "needs_review", candidates: (sized.length ? sized : sapCodes).slice(0, 5) };
     }
@@ -146,6 +162,41 @@ export function matchDesign(
     };
   }
   return { materialCode: null, materialName: null, method: "none", confidence: 0, status: "unmapped", candidates: [] };
+}
+
+export interface SalesEvidence {
+  /** SAP accounts of the dealers that displayed this design (incl. linked accounts). */
+  displayAccounts: Set<string>;
+  /** First display month of this design (yyyy-mm). */
+  firstMonth: string;
+  /** Positive sales lines per candidate code: dealer + month. */
+  salesOf: (code: string) => { dealerCode: string; month: string }[];
+}
+
+/**
+ * Settles a "needs review" design from SAP sales, when the evidence points at exactly one candidate:
+ *   dealer_purchases  the dealers who displayed the design bought exactly one of the candidates
+ *   only_one_selling  they bought none, and only one candidate has sold at all (any dealer) since the first display
+ * Candidates are first narrowed to the display's size; for a fuzzy match, also to names that start with the display's name.
+ * Returns null when the evidence doesn't decide (then a person must).
+ */
+export function decideBySales(dKey: string, sizeKey: string, m: MatchResult, ev: SalesEvidence): MatchResult | null {
+  if (m.status !== "needs_review" || m.method === "size_mismatch") return null;
+  let cands = [...new Map(m.candidates.map((c) => [c.code, c])).values()];
+  if (sizeKey) cands = cands.filter((c) => !c.sizeKey || c.sizeKey === sizeKey);
+  if (m.method === "fuzzy") cands = cands.filter((c) => c.sizeKey === sizeKey && designKey(c.name).startsWith(dKey));
+  if (!cands.length) return null;
+  const bought = cands.filter((c) => ev.salesOf(c.code).some((s) => ev.displayAccounts.has(s.dealerCode)));
+  if (bought.length === 1) {
+    return { materialCode: bought[0].code, materialName: bought[0].name, method: "dealer_purchases", confidence: 0.8, status: "auto", candidates: cands };
+  }
+  if (bought.length === 0 && cands.length > 1) {
+    const selling = cands.filter((c) => ev.salesOf(c.code).some((s) => s.month >= ev.firstMonth));
+    if (selling.length === 1) {
+      return { materialCode: selling[0].code, materialName: selling[0].name, method: "only_one_selling", confidence: 0.7, status: "auto", candidates: cands };
+    }
+  }
+  return null;
 }
 
 /** Rebuild the map for every distinct design in rmi_display, then stamp material_code/map_status on each row. */
@@ -181,16 +232,30 @@ export async function rebuildDesignMap(): Promise<Record<string, number>> {
       sizeMm: t.rmiDisplay.sizeMm,
       materialCode: t.rmiDisplay.materialCode,
       mapStatus: t.rmiDisplay.mapStatus,
+      dealerCode: t.rmiDisplay.dealerCode,
+      cohortMonth: t.rmiDisplay.cohortMonth,
     })
     .from(t.rmiDisplay);
-  const groups = new Map<string, { dKey: string; sKey: string; name: string; size: string | null; refs: string[] }>();
+  const links = await linkedAccounts();
+  // Positive sales per material (for settling review items from SAP evidence).
+  const salesByCode = new Map<string, { dealerCode: string; month: string }[]>();
+  for (const s of await db
+    .select({ dealerCode: t.sapSalesMonthly.dealerCode, materialCode: t.sapSalesMonthly.materialCode, month: t.sapSalesMonthly.month, value: t.sapSalesMonthly.value })
+    .from(t.sapSalesMonthly)) {
+    if (s.value <= 0) continue;
+    (salesByCode.get(s.materialCode) ?? salesByCode.set(s.materialCode, []).get(s.materialCode)!).push(s);
+  }
+  const groups = new Map<string, { dKey: string; sKey: string; name: string; size: string | null; refs: string[]; dealers: Set<string>; first: string }>();
   for (const r of rows) {
     const dKey = designKey(r.designName);
     if (!dKey) continue;
     const sKey = normalizeTileSize(r.sizeMm);
     const k = `${dKey}|${sKey}`;
-    if (!groups.has(k)) groups.set(k, { dKey, sKey, name: r.designName!, size: r.sizeMm, refs: [] });
-    groups.get(k)!.refs.push(r.refNo);
+    if (!groups.has(k)) groups.set(k, { dKey, sKey, name: r.designName!, size: r.sizeMm, refs: [], dealers: new Set(), first: "9999-12" });
+    const g = groups.get(k)!;
+    g.refs.push(r.refNo);
+    for (const a of r.dealerCode ? (links.get(r.dealerCode) ?? [r.dealerCode]) : []) g.dealers.add(a);
+    if (r.cohortMonth && r.cohortMonth < g.first) g.first = r.cohortMonth;
   }
 
   const existing = new Map((await db.select().from(t.designMaterialMap)).map((m) => [`${m.designKey}|${m.sizeKey}`, m]));
@@ -204,7 +269,9 @@ export async function rebuildDesignMap(): Promise<Record<string, number>> {
       upserts.push({ ...prev, rowCount: g.refs.length, updatedAt: prev.updatedAt });
       continue;
     }
-    const m = matchDesign(g.dKey, g.sKey, catalog, byName, sapByName);
+    const first = matchDesign(g.dKey, g.sKey, catalog, byName, sapByName);
+    const m =
+      decideBySales(g.dKey, g.sKey, first, { displayAccounts: g.dealers, firstMonth: g.first, salesOf: (c) => salesByCode.get(c) ?? [] }) ?? first;
     decided.set(k, { code: m.materialCode, status: m.status });
     upserts.push({
       designKey: g.dKey,

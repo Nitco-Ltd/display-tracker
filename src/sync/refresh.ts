@@ -2,6 +2,7 @@
 // One refresh at a time per process; a second request waits for the running one instead of starting another.
 import { syncRmi } from "./rmi-sync";
 import { syncSap } from "./sap-sync";
+import { rebuildDesignMap } from "./design-match";
 import { openCohorts, writeReports } from "@/report/generate";
 
 let running: Promise<string> | null = null;
@@ -22,6 +23,12 @@ export function refreshAll(): Promise<string> {
         parts.push(s.skipped ? "SAP skipped" : `SAP ${"lines" in s ? s.lines : 0} invoice lines`);
       } catch (e) {
         errors.push(`SAP: ${(e as Error).message}`);
+      }
+      try {
+        // Again after SAP: undecided designs are settled from the freshest SAP sales and customer data.
+        await rebuildDesignMap();
+      } catch (e) {
+        errors.push(`Design links: ${(e as Error).message}`);
       }
       try {
         const w = await writeReports(await openCohorts());

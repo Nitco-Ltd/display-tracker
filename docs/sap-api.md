@@ -95,7 +95,7 @@ are active on PRD (not on QAS, 192.168.81.88). Read access verified with user `1
 | `SAP_SALES_DOC_TYPES` | `ZVDT` | Normal tile invoice → +quantity, +value |
 | `SAP_RETURN_DOC_TYPES` | `ZRTI` | Tile return credit note → −quantity, −value |
 | `SAP_VALUE_ONLY_DOC_TYPES` | `ZCBR,ZCPD,ZCQC` | Rate-difference / claim credit notes → −value only |
-| everything else | ignored | Marble (ZMAR, ZMRO, ZMBR, ZMRJ), stock transfer (ZSTM), mosaic/services (ZDMO, ZSER, YSER, ZSTF, ZAF1, ZSCR), samples (ZDMS, YDMS), export (ZEXO), debit notes (ZTDN), ZNTI, cancellations (S1–S3) and pro forma (ZKB, YSTM, YDMS) |
+| everything else | ignored | Marble (ZMAR, ZMRO, ZMBR, ZMRJ), stock transfer (ZSTM), mosaic/services (ZDMO, ZSER, YSER, ZSTF, ZAF1, ZSCR), samples (YDMS), export (ZEXO), cancellations (S1–S3) and pro forma (ZKB, YSTM, YDMS) |
 
 Cancelled invoices (`BillingDocumentIsCancelled`) are always excluded. Month = billing date. Value = `NetAmount`
 (before GST). Volume = billed quantity converted to m² with the material's unit conversion (e.g. Marlow Frost
@@ -159,3 +159,16 @@ created 27 Aug 2026), GSTIN 10COSPP0792L1ZG, PIN 846004. SAP has no customer hie
 `A_CustSalesPartnerFunc`: only self-references). Implemented in `src/sales/dealers.ts`. Sales from the linked accounts are shown
 separately on the report's "How sales were matched" sheet. If the customer master can't be read, the sync logs a warning and
 sales are counted on the RMI dealer code only.
+
+**Undecided invoice types ZNTI, ZDMS (samples), ZTDN (debit notes) (2026-11-25):** not counted in the standard numbers, but kept
+apart in `sap_sales_monthly.extra_volume` / `extra_value` (ZNTI, ZDMS: + quantity and value; ZTDN: + value only), set by
+`SAP_EXTRA_DOC_TYPES` / `SAP_EXTRA_VALUE_ONLY_DOC_TYPES`. Every report comes in two versions: the standard file and
+`…_incl_ZTDN_ZNTI_ZDMS.xlsx`. The dashboard and the download page have a **Sales counted** switch (`?sales=incl`,
+`/api/report?extra=1`). When sales ops decides, move the types into `SAP_SALES_DOC_TYPES` (or drop them) in `.env`.
+Effect today: after-display sales ₹13.22 Cr → ₹13.23 Cr; converted display pairs 1,630 → 1,722 (mostly ZDMS samples).
+
+**Design review settled from SAP sales (2026-11-25):** a design the name and size can't decide is linked automatically when
+SAP sales point at exactly one candidate: `dealer_purchases` (the dealers who displayed it bought exactly one candidate,
+counting linked accounts) or `only_one_selling` (they bought none, and only one candidate has sold at all since the first
+display). A blank RMI size with exactly one SAP product of that name is linked too. These are re-evaluated on every sync
+(after the SAP sync), so they can change as new sales arrive; a person's decision on the Design review page always wins.

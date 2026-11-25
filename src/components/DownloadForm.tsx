@@ -32,6 +32,16 @@ export function DownloadForm({ options }: { options: FilterOptions }) {
         <MultiSelect label="Product Type" options={o(options.ptypes)} selected={v.ptype ?? []} onChange={set("ptype")} />
         <MultiSelect label="Size (MM)" options={o(options.sizes)} selected={v.size ?? []} onChange={set("size")} />
         <MultiSelect label="Design Name" options={o(options.designs)} selected={v.design ?? []} onChange={set("design")} />
+        <MultiSelect
+          single
+          label="Sales counted"
+          options={[
+            { value: "0", label: "Without ZTDN, ZNTI, ZDMS" },
+            { value: "1", label: "With ZTDN, ZNTI, ZDMS" },
+          ]}
+          selected={v.extra?.length ? v.extra : ["0"]}
+          onChange={(vals) => set("extra")(vals.includes("1") ? ["1"] : [])}
+        />
         <div className="flex items-end">
           <button onClick={download} className="w-full rounded-md px-4 py-2 text-[13px] font-medium bg-accent text-white">
             Download Excel

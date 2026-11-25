@@ -14,7 +14,7 @@ export default async function Download() {
       </p>
       <DownloadForm options={options} />
       <p className="text-[12px] text-ink-3 mt-4">
-        The scheduled job also saves the full report for every month still inside its 14-month window to <code>{config().REPORT_OUTPUT_DIR}</code>.
+        The scheduled job also saves the full report, in both versions (without and with ZTDN, ZNTI, ZDMS invoices), for every month still inside its 14-month window to <code>{config().REPORT_OUTPUT_DIR}</code>.
       </p>
     </div>
   );

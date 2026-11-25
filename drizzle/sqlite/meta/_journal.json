@@ -15,6 +15,13 @@
       "when": 1795582739158,
       "tag": "0001_chubby_lightspeed",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1795585664115,
+      "tag": "0002_quick_may_parker",
+      "breakpoints": true
     }
   ]
 }
