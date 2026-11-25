@@ -98,7 +98,10 @@ export default async function Review() {
                   <td>{m.designName}</td>
                   <td>{m.sizeMm}</td>
                   <td>{m.status === "rejected" ? "No match" : m.status === "manual" ? "Typed code" : "Approved"}</td>
-                  <td className="text-ink-2">{m.materialCode ? `${m.materialName ?? ""} · ${m.materialCode}` : "–"}</td>
+                  <td className="text-ink-2">
+                    {m.materialCode ? `${m.materialName ?? ""} · ${m.materialCode}` : "–"}
+                    {m.note && <div className="text-[11px] text-ink-3">{m.note}</div>}
+                  </td>
                   <td className="num">{num(m.rowCount ?? 0)}</td>
                   <td>
                     <form action={reset}>
