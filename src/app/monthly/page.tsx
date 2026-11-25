@@ -14,7 +14,23 @@ import { inr, inrCompact, monthName, num, pct } from "@/lib/format";
 
 const list = (v: string | string[] | undefined) => (Array.isArray(v) ? v : v ? [v] : []).filter(Boolean);
 
-function StepBar({ n, label, help, value, of, strong }: { n: number; label: string; help: string; value: number; of: number; strong?: boolean }) {
+function StepBar({
+  n,
+  label,
+  help,
+  value,
+  of,
+  strong,
+  removed,
+}: {
+  n: number;
+  label: string;
+  help: string;
+  value: number;
+  of: number;
+  strong?: boolean;
+  removed?: { label: string; value: number }; // what this step leaves out, compared with the step above
+}) {
   const share = of > 0 ? Math.max(0, value / of) : 0;
   return (
     <div className="grid grid-cols-[28px_1fr] gap-x-3 py-2.5 border-b border-line last:border-0">
@@ -29,8 +45,27 @@ function StepBar({ n, label, help, value, of, strong }: { n: number; label: stri
           <div className="h-full rounded-full" style={{ width: `${Math.min(100, share * 100)}%`, background: "var(--series-1)" }} />
         </div>
         <div className="text-[12px] text-ink-3 mt-1">{help}</div>
+        {removed && (
+          <div className="text-[13px] text-ink-2 mt-1">
+            Left out from step {n - 1}: <b>{inrCompact(removed.value)}</b> {removed.label}
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+/** One line of the "split of all sales" table. */
+function SplitRow({ label, help, value, total, bold }: { label: string; help: string; value: number; total: number; bold?: boolean }) {
+  return (
+    <tr className={bold ? "font-semibold" : undefined}>
+      <td>
+        <div>{label}</div>
+        <div className="text-[12px] text-ink-3 font-normal">{help}</div>
+      </td>
+      <td className="num">{inr(value)}</td>
+      <td className="num">{pct(total ? value / total : NaN)}</td>
+    </tr>
   );
 }
 
@@ -100,6 +135,7 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
           help={`Everything bought by the ${num(r.displayDealerCount)} dealers who have at least one display, whether the tile is on display or not. Dealers without any display are left out.`}
           value={r.displayDealers}
           of={r.total}
+          removed={{ label: "sold to dealers without any display", value: r.total - r.displayDealers }}
         />
         <StepBar
           n={3}
@@ -108,7 +144,36 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
           value={r.displayedDesigns}
           of={r.total}
           strong
+          removed={{ label: "of tiles not on display, bought by dealers who have a display", value: r.displayDealers - r.displayedDesigns }}
         />
+      </Section>
+
+      <Section title={`All ${monthName(month)} sales, split three ways`} note="The three parts add up to all sales.">
+        <table className="data">
+          <thead>
+            <tr>
+              <th>Part</th>
+              <th className="num">Sales</th>
+              <th className="num">% of all sales</th>
+            </tr>
+          </thead>
+          <tbody>
+            <SplitRow label="Dealers without any display" help="Dealers who have no RMI display." value={r.total - r.displayDealers} total={r.total} />
+            <SplitRow
+              label="Dealers with a display: tiles not on display"
+              help="Other tiles bought by dealers who have a display."
+              value={r.displayDealers - r.displayedDesigns}
+              total={r.total}
+            />
+            <SplitRow
+              label="Dealers with a display: tiles on display"
+              help="Tiles bought by the same dealer that displays them."
+              value={r.displayedDesigns}
+              total={r.total}
+            />
+            <SplitRow label="All sales" help="Total of the three parts." value={r.total} total={r.total} bold />
+          </tbody>
+        </table>
       </Section>
 
       <Section
@@ -130,14 +195,19 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
           </div>
         }
       >
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
           <Kpi label="Displays put up" value={num(r.monthDisplays)} />
           <Kpi label="Dealers" value={num(r.monthDealerCount)} />
           <Kpi label="4 · All sales to these dealers" value={inrCompact(r.monthDealers)} sub="any tile, on display or not" />
           <Kpi
-            label="5 · Sales of the tiles put on display this month"
+            label="Tiles not put on display this month"
+            value={inrCompact(r.monthDealers - r.monthDesigns)}
+            sub={r.monthDealers ? `${pct((r.monthDealers - r.monthDesigns) / r.monthDealers)} of step 4` : undefined}
+          />
+          <Kpi
+            label="5 · Tiles put on display this month"
             value={inrCompact(r.monthDesigns)}
-            sub={r.monthDealers ? `${pct(r.monthDesigns / r.monthDealers)} of step 4 · same as the report's ${monthName(month)} column` : undefined}
+            sub={r.monthDealers ? `${pct(r.monthDesigns / r.monthDealers)} of step 4 · = the report's ${monthName(month)} column` : undefined}
           />
         </div>
       </Section>
@@ -150,8 +220,10 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
                 <th>Zone</th>
                 <th>Region</th>
                 <th className="num">1 · All sales</th>
-                <th className="num">2 · To dealers with a display</th>
-                <th className="num">3 · Tiles on display</th>
+                <th className="num">Dealers without a display</th>
+                <th className="num">2 · Dealers with a display</th>
+                <th className="num">…tiles not on display</th>
+                <th className="num">3 · …tiles on display</th>
                 <th className="num">3 as % of 1</th>
                 <th className="num">Displays put up this month</th>
                 <th className="num">5 · Sales of those tiles</th>
@@ -163,7 +235,9 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
                   <td>{x.zone}</td>
                   <td>{x.region}</td>
                   <td className="num">{inr(x.total)}</td>
+                  <td className="num">{inr(x.total - x.displayDealers)}</td>
                   <td className="num">{inr(x.displayDealers)}</td>
+                  <td className="num">{inr(x.displayDealers - x.displayedDesigns)}</td>
                   <td className="num">{inr(x.displayedDesigns)}</td>
                   <td className="num">{pct(x.total ? x.displayedDesigns / x.total : NaN)}</td>
                   <td className="num">{num(x.monthDisplays)}</td>
@@ -172,7 +246,7 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
               ))}
               {!r.byRegion.length && (
                 <tr>
-                  <td colSpan={8} className="text-ink-3">
+                  <td colSpan={10} className="text-ink-3">
                     No sales for this selection.
                   </td>
                 </tr>

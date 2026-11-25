@@ -187,10 +187,21 @@ export function addSummarySheet(wb: ExcelJS.Workbook, cohort: string, f: FunnelR
   line("2", "Sales to dealers who have a display: everything they bought, on display or not", f.displayDealers, f.total ? f.displayDealers / f.total : undefined);
   line("3", "Sales of the tiles on display: only tiles on display at the same dealer who bought them", f.displayedDesigns, f.total ? f.displayedDesigns / f.total : undefined);
   ws.addRow([]);
+  ws.addRow(["", "Left out at each step", "Value", "% of step 1"]).font = { bold: true };
+  line("1→2", "Sold to dealers without any display", f.total - f.displayDealers, f.total ? (f.total - f.displayDealers) / f.total : undefined);
+  line("2→3", "Tiles not on display, bought by dealers who have a display", f.displayDealers - f.displayedDesigns, f.total ? (f.displayDealers - f.displayedDesigns) / f.total : undefined);
+  ws.addRow([]);
+  ws.addRow(["", "All sales, split three ways (adds up to step 1)", "Value", "% of step 1"]).font = { bold: true };
+  line("", "Dealers without any display", f.total - f.displayDealers, f.total ? (f.total - f.displayDealers) / f.total : undefined);
+  line("", "Dealers with a display: tiles not on display", f.displayDealers - f.displayedDesigns, f.total ? (f.displayDealers - f.displayedDesigns) / f.total : undefined);
+  line("", "Dealers with a display: tiles on display", f.displayedDesigns, f.total ? f.displayedDesigns / f.total : undefined);
+  line("", "All sales", f.total, f.total ? 1 : undefined);
+  ws.addRow([]);
   head(`B. Displays put up in ${longMonth(cohort)} (the Report sheet)`);
   ws.addRow(["", "Displays put up", f.monthDisplays]);
   ws.addRow(["", "Dealers", f.monthDealerCount]);
   line("4", "All sales to these dealers this month (any tile, on display or not)", f.monthDealers);
+  line("", "…tiles not put on display this month", f.monthDealers - f.monthDesigns, f.monthDealers ? (f.monthDealers - f.monthDesigns) / f.monthDealers : undefined);
   line("5", "Sales of the tiles put on display this month (= the Report sheet's " + monthLabel(cohort) + " Sales Value column)", f.monthDesigns, f.monthDealers ? f.monthDesigns / f.monthDealers : undefined);
   ws.addRow([]);
   head("C. The month columns in the Report sheet");
@@ -208,14 +219,36 @@ export function addSummarySheet(wb: ExcelJS.Workbook, cohort: string, f: FunnelR
   }
   ws.addRow([]);
   head("D. By region");
-  const h = ws.addRow(["", "Zone · Region", "1 · All sales", "3 as % of 1", "2 · To dealers with a display", "3 · Tiles on display", "Displays put up this month", "5 · Sales of those tiles"]);
+  const h = ws.addRow([
+    "",
+    "Zone · Region",
+    "1 · All sales",
+    "3 as % of 1",
+    "Dealers without a display",
+    "2 · Dealers with a display",
+    "…tiles not on display",
+    "3 · …tiles on display",
+    "Displays put up this month",
+    "5 · Sales of those tiles",
+  ]);
   h.font = { bold: true };
   for (const x of f.byRegion) {
-    const r = ws.addRow(["", `${x.zone} · ${x.region}`, x.total, x.total ? x.displayedDesigns / x.total : null, x.displayDealers, x.displayedDesigns, x.monthDisplays, x.monthDesigns]);
-    for (const c of [3, 5, 6, 8]) r.getCell(c).numFmt = money;
+    const r = ws.addRow([
+      "",
+      `${x.zone} · ${x.region}`,
+      x.total,
+      x.total ? x.displayedDesigns / x.total : null,
+      x.total - x.displayDealers,
+      x.displayDealers,
+      x.displayDealers - x.displayedDesigns,
+      x.displayedDesigns,
+      x.monthDisplays,
+      x.monthDesigns,
+    ]);
+    for (const c of [3, 5, 6, 7, 8, 10]) r.getCell(c).numFmt = money;
     r.getCell(4).numFmt = "0.0%";
   }
-  for (const c of [5, 6, 7, 8]) ws.getColumn(c).width = 18;
+  for (const c of [5, 6, 7, 8, 9, 10]) ws.getColumn(c).width = 18;
 }
 
 function addMonth(ym: string, n: number): string {
