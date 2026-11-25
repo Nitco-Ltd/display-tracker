@@ -177,6 +177,53 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
       </Section>
 
       <Section
+        title="Which tiles dealers with a display bought"
+        note="“Not on display” means not on display at the dealer who bought it (it may be on display at another dealer). Top 25 tiles by sales in each list."
+      >
+        <div className="grid gap-5 lg:grid-cols-2">
+          {(
+            [
+              ["Tiles not on display", r.tilesNotOnDisplay, r.displayDealers - r.displayedDesigns],
+              ["Tiles on display", r.tilesOnDisplay, r.displayedDesigns],
+            ] as const
+          ).map(([title, tiles, total]) => (
+            <div key={title} className="overflow-auto">
+              <div className="text-[14px] font-medium mb-1">
+                {title} · {inrCompact(total)}
+              </div>
+              <table className="data">
+                <thead>
+                  <tr>
+                    <th>Tile</th>
+                    <th>Size</th>
+                    <th className="num">Sales</th>
+                    <th className="num">Dealers</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tiles.map((x) => (
+                    <tr key={`${x.design}|${x.size}`}>
+                      <td>{x.design}</td>
+                      <td>{x.size}</td>
+                      <td className="num">{inr(x.value)}</td>
+                      <td className="num">{num(x.dealers)}</td>
+                    </tr>
+                  ))}
+                  {!tiles.length && (
+                    <tr>
+                      <td colSpan={4} className="text-ink-3">
+                        None.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section
         title={`Displays put up in ${monthName(month)}`}
         note={
           <>

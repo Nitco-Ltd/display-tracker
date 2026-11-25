@@ -30,10 +30,22 @@ export interface FunnelSteps {
   displayDealerCount: number;
 }
 
+export interface TileLine {
+  design: string;
+  size: string;
+  value: number;
+  dealers: number;
+}
+
 export interface FunnelResult extends FunnelSteps {
   month: string;
   byRegion: ({ zone: string; region: string } & FunnelSteps)[];
+  /** Tiles bought by dealers with a display, split by whether that tile is on display at the buying dealer (top by value). */
+  tilesNotOnDisplay: TileLine[];
+  tilesOnDisplay: TileLine[];
 }
+
+const TOP_TILES = 25;
 
 export interface FunnelFilter {
   zones?: string[];
@@ -125,7 +137,19 @@ export async function salesFunnel(month: string, f: FunnelFilter = {}, opts: { i
     if (r.cohortMonth === month) monthDisplayRows.push(r);
   }
 
-  const res: FunnelResult = { month, ...empty(), byRegion: [] };
+  const groupOf = new Map<string, string>();
+  for (const r of displays) for (const a of r.salesAccounts) groupOf.set(a, r.dealerGroup ?? a);
+  const groupOfAcct = (a: string) => groupOf.get(a) ?? a;
+  const res: FunnelResult = { month, ...empty(), byRegion: [], tilesNotOnDisplay: [], tilesOnDisplay: [] };
+  const desc = new Map((await db.select({ m: t.sapMaterial.material, d: t.sapMaterial.description }).from(t.sapMaterial)).map((x) => [x.m, x.d ?? x.m]));
+  const tileAcc = { on: new Map<string, { v: number; d: Set<string> }>(), off: new Map<string, { v: number; d: Set<string> }>() };
+  const tileKey = (code: string) => `${desc.get(code) ?? code}|${code.match(/(\d{3,4})X(\d{3,4})/i)?.slice(1).join("x") ?? ""}`;
+  const addTile = (which: "on" | "off", code: string, dealer: string, v: number) => {
+    const k = tileKey(code);
+    const e = tileAcc[which].get(k) ?? tileAcc[which].set(k, { v: 0, d: new Set() }).get(k)!;
+    e.v += v;
+    e.d.add(dealer);
+  };
   const regions = new Map<string, { zone: string; region: string } & FunnelSteps>();
   const bucket = (c: string) => {
     const g = geo.get(c) ?? { zone: "Unknown", region: "Unknown" };
@@ -161,7 +185,15 @@ export async function salesFunnel(month: string, f: FunnelFilter = {}, opts: { i
     const v = s.value + (extra ? s.extraValue : 0);
     if (pairs.has(k)) add("displayedDesigns", s.dealerCode, v);
     if (monthPairs.has(k)) add("monthDesigns", s.dealerCode, v);
+    if (displayAccts.has(s.dealerCode) && v) addTile(pairs.has(k) ? "on" : "off", s.materialCode, groupOfAcct(s.dealerCode), v);
   }
+  const top = (m: Map<string, { v: number; d: Set<string> }>): TileLine[] =>
+    [...m]
+      .map(([k, e]) => ({ design: k.split("|")[0], size: k.split("|")[1], value: e.v, dealers: e.d.size }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, TOP_TILES);
+  res.tilesOnDisplay = top(tileAcc.on);
+  res.tilesNotOnDisplay = top(tileAcc.off);
   // Counts of displays / dealers (by the RMI dealer's own account area).
   const monthDealerGroups = new Set<string>();
   for (const r of monthDisplayRows) {
@@ -174,9 +206,7 @@ export async function salesFunnel(month: string, f: FunnelFilter = {}, opts: { i
       bucket(r.dealerCode!).monthDealerCount++;
     }
   }
-  const groupOf = new Map<string, string>();
-  for (const r of displays) for (const a of r.salesAccounts) groupOf.set(a, r.dealerGroup ?? a);
-  res.displayDealerCount = new Set([...custDealers].map((c) => groupOf.get(c) ?? c)).size;
+  res.displayDealerCount = new Set([...custDealers].map(groupOfAcct)).size;
   res.byRegion = [...regions.values()].filter((r) => r.total || r.monthDisplays).sort((a, b) => b.total - a.total);
   return res;
 }

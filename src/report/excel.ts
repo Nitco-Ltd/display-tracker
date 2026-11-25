@@ -249,6 +249,20 @@ export function addSummarySheet(wb: ExcelJS.Workbook, cohort: string, f: FunnelR
     r.getCell(4).numFmt = "0.0%";
   }
   for (const c of [5, 6, 7, 8, 9, 10]) ws.getColumn(c).width = 18;
+
+  ws.addRow([]);
+  head("E. Which tiles dealers with a display bought (top 25 each; “not on display” = not at the dealer who bought it)");
+  for (const [title, tiles] of [
+    ["Tiles not on display", f.tilesNotOnDisplay],
+    ["Tiles on display", f.tilesOnDisplay],
+  ] as const) {
+    ws.addRow(["", title, "Sales", "Dealers"]).font = { bold: true };
+    for (const x of tiles) {
+      const r = ws.addRow(["", `${x.design}${x.size ? ` (${x.size})` : ""}`, x.value, x.dealers]);
+      r.getCell(3).numFmt = money;
+    }
+    ws.addRow([]);
+  }
 }
 
 function addMonth(ym: string, n: number): string {
