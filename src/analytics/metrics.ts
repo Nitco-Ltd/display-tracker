@@ -32,7 +32,7 @@ function at(r: DisplayWithSales, offset: number, cur: string) {
   return r.sales.find((s) => s.month === m) ?? { month: m, volume: 0, value: 0 };
 }
 
-const isLinked = (r: DisplayWithSales) => !!r.materialCode && r.mapStatus === "mapped";
+export const isLinked = (r: DisplayWithSales) => !!r.materialCode && r.mapStatus === "mapped";
 const pairKey = (r: DisplayWithSales) => `${r.dealerGroup ?? r.dealerCode}|${r.salesFamily ?? r.materialCode}|${r.cohortMonth}`;
 
 export function isMeasurable(r: DisplayWithSales, cur: string): boolean {
