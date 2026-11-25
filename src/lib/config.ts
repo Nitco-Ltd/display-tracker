@@ -46,6 +46,8 @@ const schema = z.object({
   PUBLISH_DATABASE_URL: z.string().optional(),
   // Dashboard can't reach SAP/RMI (cloud host): hides "Refresh now" and blocks /api/refresh. Vercel sets VERCEL=1 itself.
   READ_ONLY: bool,
+  // Sign-in: a random string of 32+ characters. When set (and always on Vercel), everyone must sign in.
+  AUTH_SECRET: z.string().optional(),
 
   // Outputs
   REPORT_OUTPUT_DIR: z.string().default("./reports"),

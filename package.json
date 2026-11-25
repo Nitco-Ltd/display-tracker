@@ -16,7 +16,8 @@
     "daily": "tsx scripts/daily.ts",
     "sap:cert": "tsx scripts/sap-cert.ts",
     "decisions": "tsx scripts/decisions.ts",
-    "publish": "tsx scripts/publish.ts"
+    "publish": "tsx scripts/publish.ts",
+    "users": "tsx scripts/users.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",

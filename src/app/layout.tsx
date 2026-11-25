@@ -6,6 +6,8 @@ import { FreshnessBanner } from "@/components/FreshnessBanner";
 import { RefreshButton } from "@/components/RefreshButton";
 import { getViewer, canAdminister } from "@/auth/viewer";
 import { isReadOnly } from "@/lib/config";
+import { loginRequired } from "@/auth/session";
+import { logout } from "./login/actions";
 
 export const metadata: Metadata = {
   title: "Display Tracker",
@@ -22,16 +24,26 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <header className="border-b border-line bg-surface-1">
           <div className="mx-auto max-w-[1400px] px-4 md:px-6 py-3 flex flex-wrap items-center gap-x-6 gap-y-2">
             <div className="font-semibold text-[15px] tracking-tight">Display Tracker</div>
-            <Suspense>
-              <Nav />
-            </Suspense>
-            <div className="ml-auto flex items-center gap-3">
-              <FreshnessBanner compact />
-              {canAdminister(viewer) && !isReadOnly() && <RefreshButton />}
-            </div>
+            {viewer && (
+              <>
+                <Suspense>
+                  <Nav />
+                </Suspense>
+                <div className="ml-auto flex items-center gap-3">
+                  <FreshnessBanner compact />
+                  {canAdminister(viewer) && !isReadOnly() && <RefreshButton />}
+                  {loginRequired() && (
+                    <form action={logout} className="text-[12px] text-ink-3 text-right leading-tight">
+                      <div>{viewer.name}</div>
+                      <button className="text-accent">Sign out</button>
+                    </form>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </header>
-        <FreshnessBanner />
+        {viewer && <FreshnessBanner />}
         <main className="mx-auto w-full max-w-[1400px] px-4 md:px-6 py-6 flex-1">{children}</main>
       </body>
     </html>

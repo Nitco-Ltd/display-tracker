@@ -172,3 +172,16 @@ export const sapSalesMonthly = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.dealerCode, t.materialCode, t.month] })],
 );
+
+// People who may sign in to the dashboard (managed with `npm run users`). Passwords are stored only as scrypt hashes.
+export const appUser = sqliteTable("app_user", {
+  email: text("email").primaryKey(), // lower-case
+  name: text("name").notNull(),
+  role: text("role").notNull(), // admin | zonal | rmi
+  zone: text("zone"), // for role zonal: RMI zone name, e.g. "East Zone 1"
+  rmiName: text("rmi_name"), // for role rmi: name exactly as in RMI, e.g. "Samrat Dutta"
+  passwordHash: text("password_hash").notNull(),
+  active: integer("active").notNull().default(1),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});

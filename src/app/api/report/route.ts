@@ -12,7 +12,9 @@ export async function GET(req: NextRequest) {
   await ensureSchema();
   const sp: SearchParams = {};
   for (const k of new Set(req.nextUrl.searchParams.keys())) if (k !== "month" && k !== "extra") sp[k] = req.nextUrl.searchParams.getAll(k);
-  const filter = scopeFilter(await getViewer(), parseFilter(sp));
+  const viewer = await getViewer();
+  if (!viewer) return Response.json({ error: "Please sign in." }, { status: 401 });
+  const filter = scopeFilter(viewer, parseFilter(sp));
   const opts = { includeExtra: req.nextUrl.searchParams.get("extra") === "1" };
   const { buffer } = await buildReportBuffer(month, filter, undefined, opts);
   return new Response(new Uint8Array(buffer), {

@@ -3,7 +3,7 @@ import "server-only";
 import { asc, isNotNull } from "drizzle-orm";
 import { getDb, tables } from "@/db/client";
 import { ensureSchema } from "@/db/migrate";
-import { getViewer, scopeFilter } from "@/auth/viewer";
+import { requireViewer, scopeFilter } from "@/auth/viewer";
 import { filterWhere, type ReportFilter } from "@/report/filters";
 import { displaysWithSales } from "@/sales/window";
 
@@ -36,7 +36,7 @@ export function parseFilter(sp: SearchParams): ReportFilter {
 
 export async function loadRows(sp: SearchParams) {
   await ensureSchema();
-  const viewer = await getViewer();
+  const viewer = await requireViewer();
   const filter = scopeFilter(viewer, parseFilter(sp));
   // ?sales=incl -> also count ZTDN, ZNTI, ZDMS invoices (not decided yet whether they are sales).
   return displaysWithSales(filterWhere(filter), { includeExtra: [sp.sales].flat().includes("incl") });
@@ -58,7 +58,7 @@ export interface FilterOptions {
 
 export async function filterOptions(): Promise<FilterOptions> {
   await ensureSchema();
-  const viewer = await getViewer();
+  const viewer = await requireViewer();
   const t = tables().rmiDisplay;
   const rows = await getDb()
     .select({

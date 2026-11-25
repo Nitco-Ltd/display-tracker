@@ -14,7 +14,7 @@ import { log } from "@/lib/log";
 import { startRun } from "./runs";
 
 /** Dashboard tables, in insert order. */
-const TABLES = ["rmiDisplay", "sapSalesMonthly", "sapMaterial", "sapCustomer", "designMaterialMap", "syncRuns"] as const;
+const TABLES = ["rmiDisplay", "sapSalesMonthly", "sapMaterial", "sapCustomer", "designMaterialMap", "syncRuns", "appUser"] as const;
 const SYNC_RUNS_KEPT = 300;
 const MAX_PARAMS = 30_000; // Postgres allows 65,535 bind parameters per statement
 
