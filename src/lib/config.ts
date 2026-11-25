@@ -40,6 +40,9 @@ const schema = z.object({
   SAP_EXTRA_VALUE_ONLY_DOC_TYPES: z.string().default("ZTDN"), // + value only (debit notes)
   // Divisions counted as tile sales in the Monthly sales view (NITCO's Sales data MIS = division 02). Blank = all.
   SAP_TILE_DIVISIONS: z.string().default("02"),
+  // 1 = count cancelled documents in their own month and the cancellation documents (S1/S2/S3) on their own date
+  // (SAP's register method). 0 = drop cancelled documents (and leave S1/S2/S3 out of the doc-type lists).
+  SAP_INCLUDE_CANCELLED: bool,
   SAP_FIRST_BILLING_DATE: z.string().default("2025-03-01"),
   SAP_RECHECK_MONTHS: z.coerce.number().int().min(0).max(12).default(3),
   SAP_VOLUME_UNIT: z.string().default("M2"),

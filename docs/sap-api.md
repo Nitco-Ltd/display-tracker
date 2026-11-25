@@ -183,3 +183,9 @@ are kept in `sap_customer_monthly`. Aug-2026: Bihar ₹3,61,78,359, Orissa ₹2,
 Shown on the page and in the report's Summary sheet as a tree: all sales → dealers without a display / dealers with a
 display → …other tiles / …tiles on display at their shop; plus the month's new displays and how much of the newly displayed
 tiles they bought (= the report's display-month column). Implemented in `src/sales/funnel.ts`.
+
+**Register method (decided 2026-11-25, matches NITCO's "Book2" SAP extract to the rupee):** cancelled documents are kept in
+their own month and the cancellation documents count on their own date (S1 −, S2 +, S3 −; `SAP_INCLUDE_CANCELLED=1`).
+ZSCR and ZMAR count as sales, ZCQC reduces value. A line is a tile when its division is 02 or its material is a tile code (TI…)
+— one ZMAR tile line is billed under division 05. Sep-2026, all regions, tiles, with ZTDN/ZNTI/ZDMS: ₹36,68,50,225 = Book2.
+(This replaces the earlier "drop cancelled documents" and "no ZCQC" rules.)

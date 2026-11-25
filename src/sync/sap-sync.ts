@@ -10,7 +10,9 @@
 //   - document type in SAP_VALUE_ONLY_DOC_TYPES -> −value only (rate-difference / claim credit notes)
 //   - document type in SAP_EXTRA_DOC_TYPES / SAP_EXTRA_VALUE_ONLY_DOC_TYPES (ZNTI, ZDMS / ZTDN; undecided) -> kept apart in
 //     extra_volume / extra_value, added only for the "incl. ZTDN, ZNTI, ZDMS" version of reports and dashboard
-//   - cancelled documents and every other type (cancellations S1/S2, pro forma, …) -> ignored
+//   - SAP_INCLUDE_CANCELLED=1: cancelled documents still count in their own month, and the cancellation documents (S1 −, S2 +, S3 −)
+//     count on their own date (SAP's register method, as in NITCO's Book2 extract); otherwise cancelled documents are dropped
+//   - cancelled documents (when not included) and every other type (cancellations S1/S2, pro forma, …) -> ignored
 //   - month = billing date; value = NetAmount (net of tax); volume converted to SAP_VOLUME_UNIT (m²)
 import { config, csv } from "@/lib/config";
 import { SapClient } from "@/adapters/sap";
@@ -121,6 +123,9 @@ export async function rebuildMonthlySales(): Promise<{ rows: number; noVolume: n
   const t = tables();
   const sales = new Set(csv(config().SAP_SALES_DOC_TYPES));
   const returns = new Set(csv(config().SAP_RETURN_DOC_TYPES));
+  // SAP register method: keep cancelled documents in their own month and count the cancellation documents (S1/S2/S3,
+  // configured as sales/returns types) on their own date, as NITCO's register extracts do.
+  const includeCancelled = config().SAP_INCLUDE_CANCELLED;
   const valueOnly = new Set(csv(config().SAP_VALUE_ONLY_DOC_TYPES));
   const extra = new Set(csv(config().SAP_EXTRA_DOC_TYPES));
   const extraValueOnly = new Set(csv(config().SAP_EXTRA_VALUE_ONLY_DOC_TYPES));
@@ -135,7 +140,7 @@ export async function rebuildMonthlySales(): Promise<{ rows: number; noVolume: n
   const cust = new Map<string, CAcc>();
   let noVolume = 0;
   for (const l of await db.select().from(t.sapBillingItem)) {
-    if (l.isCancelled || !l.soldTo || !l.material || !l.billingDate || !l.docType) continue;
+    if ((l.isCancelled && !includeCancelled) || !l.soldTo || !l.material || !l.billingDate || !l.docType) continue;
     const isExtra = extra.has(l.docType) || extraValueOnly.has(l.docType);
     const isValueOnly = valueOnly.has(l.docType) || extraValueOnly.has(l.docType);
     const sign = sales.has(l.docType) || isExtra ? 1 : returns.has(l.docType) || isValueOnly ? -1 : 0;
@@ -157,7 +162,8 @@ export async function rebuildMonthlySales(): Promise<{ rows: number; noVolume: n
       if (vol === null) a.volumeIncomplete = 1;
     }
     acc.set(key, a);
-    if (!tileDivisions.size || tileDivisions.has(l.division ?? "")) {
+    // Tile = tile division (02), or a tile material code (TI…) billed under another division, as NITCO's register extracts classify it.
+    if (!tileDivisions.size || tileDivisions.has(l.division ?? "") || l.material.startsWith("TI")) {
       const ck = `${l.soldTo}|${a.month}`;
       const c = cust.get(ck) ?? { customer: l.soldTo, month: a.month, volume: 0, value: 0, extraVolume: 0, extraValue: 0 };
       if (isExtra) {
