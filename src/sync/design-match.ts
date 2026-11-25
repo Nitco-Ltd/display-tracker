@@ -11,7 +11,9 @@
 //   5. fuzzy          Similar name (Dice ≥ 0.75), best candidate proposed          -> "needs_review" (NOT used)
 //   6. none           Nothing similar                                               -> "unmapped"
 //   7. Still undecided -> SAP sales evidence (decideBySales): dealer_purchases / only_one_selling -> "auto" (used)
-// Rows with "approved", "manual" or "rejected" status were set by a person and are never overwritten.
+// Rows with "approved", "manual" or "rejected" status were set by a person (former Design review page, or
+// `npm run decisions -- import`) and are never overwritten.
+// A design nothing decides stays "needs_review"/"unmapped": its displays get no sales (shown on the Displays page).
 // Sales are attached only for "auto", "approved" and "manual". We never silently guess.
 import { eq } from "drizzle-orm";
 import { getDb, tables } from "@/db/client";

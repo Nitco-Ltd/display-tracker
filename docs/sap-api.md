@@ -171,4 +171,4 @@ Effect today: after-display sales ₹13.22 Cr → ₹13.23 Cr; converted display
 SAP sales point at exactly one candidate: `dealer_purchases` (the dealers who displayed it bought exactly one candidate,
 counting linked accounts) or `only_one_selling` (they bought none, and only one candidate has sold at all since the first
 display). A blank RMI size with exactly one SAP product of that name is linked too. These are re-evaluated on every sync
-(after the SAP sync), so they can change as new sales arrive; a person's decision on the Design review page always wins.
+(after the SAP sync), so they can change as new sales arrive; a decision made by hand (stored as approved/manual/rejected) always wins. (The Design review page was removed on 2026-11-25; the 26 decisions made there are kept.)

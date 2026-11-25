@@ -1,4 +1,4 @@
-// Design-review decisions are the only data that can't be re-pulled from RMI or SAP. Move them between databases:
+// Saved design links (decisions made earlier on the former Design review page) are the only data that can't be re-pulled from RMI or SAP. Move them between databases:
 //   npm run decisions -- export decisions.json     (from the database in DATABASE_URL)
 //   npm run decisions -- import decisions.json     (into the database in DATABASE_URL)
 import "./env";

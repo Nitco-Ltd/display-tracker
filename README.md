@@ -106,7 +106,6 @@ The **filters** at the top (display month, zone, region, RMI, dealer, dealer typ
 | **Zero sales** | Follow-up list: displays with no sales within 1/2/3/6/12 months. Export to Excel. |
 | **Displays** | Every display with all report columns and a sales summary. **Export to Excel** exports exactly what's filtered. |
 | **Download report** | The monthly report, like RMI's own report page: pick a month and optional filters, then **Download Excel**. |
-| **Design review** | Designs the app couldn't link to a SAP material with certainty. Pick the right material, type a code, or "No match". Your choice is remembered; **Undo** reverses it. Displays get sales only once their design is linked. |
 
 Top right: when RMI and SAP were last synced, and **Refresh now** (pulls the latest data immediately, ~35 seconds). A **red banner** appears if the last sync failed; an **amber banner** if data is more than 30 hours old.
 
@@ -154,7 +153,7 @@ Run these in Command Prompt in the project folder.
 | `npm run build:report -- --month 2026-08` | Saves one month's report (`Display_Tracker_Report_-_Aug-2026.xlsx`). Several: `--month 2026-07,2026-08`. Other folder: `--out "D:\Reports"`. |
 | `scripts\windows\start-dashboard.cmd` | Starts the dashboard at <http://localhost:3000>. |
 | `npm run sap:cert` | Shows SAP's security certificate and whether it still matches (see Troubleshooting). |
-| `npm run decisions -- export decisions.json` | Saves your Design review decisions to a file (to move them to another PC or database). `import` loads them. |
+| `npm run decisions -- export decisions.json` | Saves the design links that were decided by hand (to move them to another PC or database). `import` loads them. |
 
 ## 8. How the numbers are calculated
 
@@ -175,7 +174,7 @@ Run these in Command Prompt in the project folder.
 
 Cancelled invoices are ignored. Month = invoice date. Value = net amount, **before GST**. Volume = **m²**, converted from boxes using each tile's conversion in SAP (e.g. 1 box of 600×1200 = 1.44 m²).
 
-**Design → SAP material.** Each display counts sales of its design's own SAP code **plus that code's packaging variants**. When only the packaging changes, NITCO gives the tile a new code (e.g. Oyster Blue Onyx `TIGVMPL1200X600NOGL02160` → `…NOGL03021`). The app treats codes as packaging variants when they are identical except for the trailing serial number (e.g. `02160`, `03021`, `0301`) and have the same design name in SAP. A design whose only candidates are packaging variants of each other is linked automatically instead of going to Design review. Codes that differ anywhere else (e.g. `DCH` vs `DTL`, `NO` vs `MH`) are not added, and neither are name variants such as "(PO)", "(HW)" or "(RPO)". RMI only stores the design name. The app links it to a SAP material automatically when the name (and, if needed, the size) points to exactly one product; When the name and size can't decide, the app uses SAP sales: if the dealers who displayed the design bought only one of the possible codes, or only one of them still sells at all, that one is linked. Otherwise it goes to **Design review**. Displays with a blank design in RMI can't get sales.
+**Design → SAP material.** Each display counts sales of its design's own SAP code **plus that code's packaging variants**. When only the packaging changes, NITCO gives the tile a new code (e.g. Oyster Blue Onyx `TIGVMPL1200X600NOGL02160` → `…NOGL03021`). The app treats codes as packaging variants when they are identical except for the trailing serial number (e.g. `02160`, `03021`, `0301`) and have the same design name in SAP. A design whose only candidates are packaging variants of each other is linked automatically. Codes that differ anywhere else (e.g. `DCH` vs `DTL`, `NO` vs `MH`) are not added, and neither are name variants such as "(PO)", "(HW)" or "(RPO)". RMI only stores the design name. The app links it to a SAP material automatically when the name (and, if needed, the size) points to exactly one product; When the name and size can't decide, the app uses SAP sales: if the dealers who displayed the design bought only one of the possible codes, or only one of them still sells at all, that one is linked. Otherwise the display isn't linked and gets no sales; the **Displays** page shows "design not matched" in the last column. Displays with a blank design in RMI can't get sales.
 
 **Invoice types ZTDN, ZNTI, ZDMS** (debit notes, ZNTI, samples) are not counted as sales yet; sales ops has to decide. Until then every report comes in two versions: the normal file and one ending `_incl_ZTDN_ZNTI_ZDMS`. On the dashboard and the download page, **Sales counted** switches between them.
 
@@ -198,7 +197,7 @@ Cancelled invoices are ignored. Month = invoice date. Value = net amount, **befo
    ```
 4. Start the dashboard again. Database changes are applied automatically on the next run.
 
-**Backup:** your data is in `data\app.db`. Everything in it can be pulled again from RMI and SAP, except your **Design review** decisions. Back those up with `npm run decisions -- export decisions-backup.json`.
+**Backup:** your data is in `data\app.db`. Everything in it can be pulled again from RMI and SAP, except the design links decided by hand (26 so far). Back those up with `npm run decisions -- export decisions-backup.json`.
 
 ## 10. Troubleshooting
 
@@ -216,7 +215,7 @@ First look at the **red banner** on the dashboard or the end of `logs\daily-YYYY
 | `server certificate not trusted` / `CERT_HAS_EXPIRED` | SAP's security certificate changed. Run `npm run sap:cert`, confirm the SHA-256 fingerprint with IT, then `npm run sap:cert -- --save`. |
 | `… is open in Excel (or locked). Close it and run again.` | A report file is open. Close it in Excel; the next run (or Refresh now) rewrites it. |
 | `SAP not configured yet` (amber) | `SAP_ODATA_BASE_URL` is blank in `.env`. |
-| Dashboard shows **0** sales for a display | Its design is blank in RMI or waiting in **Design review**, or the dealer simply hasn't bought it. Purchases on the dealer's other SAP accounts are counted only when SAP has the same GST number and PIN code on both. The **Displays** page shows the SAP material (or why there is none) in the last column. |
+| Dashboard shows **0** sales for a display | Its design is blank in RMI or doesn't match a SAP product, or the dealer simply hasn't bought it. Purchases on the dealer's other SAP accounts are counted only when SAP has the same GST number and PIN code on both. The **Displays** page shows the SAP material (or why there is none) in the last column. |
 | `npm` says EACCES / root-owned cache (Mac) | Run once in Terminal: `sudo chown -R $(id -u):$(id -g) ~/.npm` |
 
 <a id="rmi-app-key"></a>**Finding RMI_APP_KEY.** Open <https://rmi.nitco.in> in Chrome, press F12, open the **Sources** tab, select the page `(index)`, and search (Ctrl+F) for `Authtoken`. The value in quotes after it is the key. It is the same for every RMI user.
@@ -228,7 +227,7 @@ First look at the **red banner** on the dashboard or the end of `logs\daily-YYYY
 | Folder / file | Contents |
 |---|---|
 | `.env` | Your settings and passwords (private) |
-| `data\app.db` | The database (all synced data, your Design review decisions) |
+| `data\app.db` | The database (all synced data, the design links decided by hand) |
 | `reports\` (or `REPORT_OUTPUT_DIR`) | The monthly Excel reports |
 | `logs\` | One log file per month from the daily job |
 | `certs\sap-prd.pem` | SAP's security certificate (public, not secret) |

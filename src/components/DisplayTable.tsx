@@ -26,7 +26,7 @@ const COLS: [string, (r: DisplayWithSales) => string | null][] = [
   ["Status", (r) => r.status],
 ];
 
-const MAP_LABEL: Record<string, string> = { mapped: "", needs_review: "design in review", unmapped: "design not found", no_design: "no design" };
+const MAP_LABEL: Record<string, string> = { mapped: "", needs_review: "design not matched", unmapped: "design not found", no_design: "no design" };
 
 export function DisplayTable({ rows }: { rows: DisplayWithSales[] }) {
   const cur = currentMonth();

@@ -31,7 +31,7 @@ A Windows or Linux VM inside the NITCO network. Everything runs as today.
    - Several users / IT standard: Postgres. Create an empty database, set
      `DATABASE_URL=postgres://user:pass@dbhost:5432/display_tracker` (add `?sslmode=require` if the DB uses TLS).
      Then run `npm run daily` once: it creates the tables and pulls everything (~4 minutes).
-     Move Design review decisions from the PC first:
+     Move the design links decided by hand from the PC first:
      `npm run decisions -- export decisions.json` (on the PC) → `npm run decisions -- import decisions.json` (on the server).
 3. **Settings**: put the variables from `.env.example` in a `.env` file on the server, or in the service's
    environment / a secrets store. Use a dedicated read-only SAP service user and an RMI service account rather
@@ -81,7 +81,7 @@ The hooks are already in place:
 - Every page and API route calls `getViewer()`, and every data query goes through `scopeFilter(viewer, filter)`:
   - `rmi`: sees only their own displays (filter by RMI name)
   - `zonal`: sees only their zone
-  - `admin`: sees everything, can use Design review and Refresh now
+  - `admin`: sees everything, can use Refresh now
 
 To switch on SSO:
 
@@ -98,6 +98,6 @@ No page or report code changes.
 - [ ] RMI and SAP passwords that were shared during setup have been changed.
 - [ ] `npm test` passes on the server (`npm run test`).
 - [ ] First `npm run daily` succeeded; dashboard banner shows both syncs green.
-- [ ] Design review decisions imported.
+- [ ] Design links decided by hand imported (`npm run decisions -- import`).
 - [ ] Backups of the database (Postgres backups, or `data/app.db`).
 - [ ] SSO switched on if anyone other than admins can reach the URL.

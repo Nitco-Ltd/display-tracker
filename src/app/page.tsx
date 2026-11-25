@@ -130,7 +130,7 @@ export default async function Overview({ searchParams }: { searchParams: Promise
         <summary className="cursor-pointer font-medium">How these numbers are calculated</summary>
         <ul className="list-disc pl-5 mt-2 space-y-1 text-ink-2">
           <li>Sales come from SAP invoices (sales org 1801): ZVDT invoices count, ZRTI returns are subtracted, ZCBR/ZCPD/ZCQC credit notes reduce value only. Value is net of GST; volume is in m².</li>
-          <li>A display gets sales only for its own dealer and the SAP material its design is linked to. {num(k.unlinked)} of these displays have no linked design yet (blank design in RMI, or waiting for review).</li>
+          <li>A display gets sales only for its own dealer and the SAP material its design is linked to. {num(k.unlinked)} of these displays have no linked design yet (blank design in RMI, or no matching SAP product).</li>
           <li>&quot;Display pair&quot; = same dealer + same design + same display month. Two panels of one design count once in rates and averages.</li>
           <li>Totals never count the same dealer × design × month of sales twice, even if it falls after several displays. {num(k.duplicateRows)} duplicate rows were merged here.</li>
           <li>&quot;Led to sales&quot; = any sales from M+1 onwards (months so far). Displays from the current month, and unlinked displays, are left out of rates.</li>

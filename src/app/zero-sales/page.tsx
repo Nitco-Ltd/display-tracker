@@ -32,7 +32,7 @@ export default async function ZeroSales({ searchParams }: { searchParams: Promis
       </div>
       <Section
         title={`Follow-up list: ${num(list.length)} displays with no sales in M+1 … M+${n}`}
-        note="Only displays whose design is linked to a SAP material and whose first N months after display have started. Displays without a linked design are not listed here (see Design review)."
+        note="Only displays whose design is linked to a SAP material and whose first N months after display have started. Displays without a linked design are not listed here."
         action={
           <a href={`/api/export?${qs.toString()}`} className="rounded-md px-3 py-1.5 text-[13px] font-medium bg-accent text-white">
             Export to Excel

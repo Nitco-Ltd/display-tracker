@@ -8,7 +8,6 @@ const LINKS = [
   { href: "/zero-sales", label: "Zero sales" },
   { href: "/displays", label: "Displays" },
   { href: "/download", label: "Download report" },
-  { href: "/review", label: "Design review" },
 ];
 
 // Filter pages share the same URL filters, so switching tabs keeps the current selection.
