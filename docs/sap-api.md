@@ -109,7 +109,7 @@ Cancelled invoices (`BillingDocumentIsCancelled`) are always excluded. Month = b
 in the material description; the business owner confirmed they are the same tile in different packaging
 (`TIGVMPL1200X600NOGL02160` / `…NOGL03021`). RMI's catalogue keeps the old code, while newer invoices use the new one.
 Implemented in `src/sales/packaging.ts` (used by the sales window and by design matching, where a design whose candidates are all packaging twins is linked automatically: method `packaging_variants`). Codes that differ elsewhere (`DCH`/`DTL`,
-`NO`/`MH`, …) and name variants ("TROPICANA (PO)", "(HW)", "(RPO)") are **not** added; that is unconfirmed.
+`NO`/`MH`, …) and name variants ("TROPICANA (PO)", "(HW)", "(RPO)") are **not** added. Confirmed by the business owner (2026-11-25): such pairs are different tiles, e.g. Tropicana Caramel `TIDCDTL600X600NOGL04014` vs `TIDCDTM600X600NOGL04001`, Black Beauty `TIGVHGE…02007` vs `TIGVHEP…02001`.
 
 ## 7. Independent check against SAP's own analytics (2026-11-24)
 
@@ -152,7 +152,7 @@ explained by (A) invoice types our rules ignore — ZDMS, ZTDN, ZNTI, one ZMAR l
 which the file books on each document's own date while we drop cancelled documents — ₹3.69 L.
 
 
-**Linked dealer accounts (decided 2026-11-25):** a display counts sales billed to any of the dealer's SAP accounts. Accounts are
+**Linked dealer accounts (decided 2026-11-25; confirmed that Project Dealer purchases count as the dealer's sales):** a display counts sales billed to any of the dealer's SAP accounts. Accounts are
 the same dealer when `A_Customer.TaxNumber3` (GSTIN) **and** the PIN code are equal, excluding NITCO-internal accounts (code
 not starting `0011`, or "NITCO" in the name). Example: Shree Shyam Tiles `0011002222` (normal) + `0011007639` (Project Dealer,
 created 27 Aug 2026), GSTIN 10COSPP0792L1ZG, PIN 846004. SAP has no customer hierarchy or partner function linking them (checked
