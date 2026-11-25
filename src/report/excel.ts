@@ -190,8 +190,9 @@ export function addSummarySheet(wb: ExcelJS.Workbook, cohort: string, f: FunnelR
   line("", "   └ Dealers with a display", f.displayDealers, of(f.displayDealers, f.total));
   line("", "         ├ …other tiles (not on display at their shop)", f.displayDealers - f.displayedDesigns, of(f.displayDealers - f.displayedDesigns, f.total));
   line("", "         └ …tiles on display at their shop", f.displayedDesigns, of(f.displayedDesigns, f.total));
+  line("", "               └ of which: tiles put on display this month (= the Report sheet's " + monthLabel(cohort) + " column)", f.monthDesigns, of(f.monthDesigns, f.total));
   ws.addRow([]);
-  head(`2. New this month: ${f.monthDisplays} displays put up at ${f.monthDealerCount} dealers (the Report sheet)`);
+  head(`2. New this month: ${f.monthDisplays} display${f.monthDisplays === 1 ? "" : "s"} put up at ${f.monthDealerCount} dealer${f.monthDealerCount === 1 ? "" : "s"} (the Report sheet)`);
   line("", "Bought of the newly displayed tiles this month (= the Report sheet's " + monthLabel(cohort) + " Sales Value column)", f.monthDesigns);
   line("", "Everything those dealers bought this month", f.monthDealers);
   ws.addRow([]);

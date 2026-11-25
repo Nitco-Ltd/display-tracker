@@ -35,7 +35,7 @@ function TreeRow({
   help: string;
   value: number;
   total: number;
-  level: 0 | 1 | 2;
+  level: 0 | 1 | 2 | 3;
   bold?: boolean;
   color: string;
   last?: boolean; // last row of its branch (└ instead of ├)
@@ -244,13 +244,23 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
                 value={r.displayedDesigns}
                 total={r.total}
               />
+              <TreeRow
+                level={3}
+                color={COLOR.onDisplay}
+                last
+                label={`of which: tiles put on display in ${monthName(month)}`}
+                help={`Only the displays put up this month (${num(r.monthDisplays)} display${r.monthDisplays === 1 ? "" : "s"}). = the ${monthName(month)} column of the Display Tracker Report.`}
+                value={r.monthDesigns}
+                total={r.total}
+              />
             </tbody>
           </table>
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-line bg-surface-0 px-3 py-2.5">
           <div className="flex-1 min-w-[260px] text-[13px]">
-            <b>New this month:</b> {num(r.monthDisplays)} displays put up at {num(r.monthDealerCount)} dealers. Those dealers bought{" "}
+            <b>New this month:</b> {num(r.monthDisplays)} display{r.monthDisplays === 1 ? "" : "s"} put up at {num(r.monthDealerCount)} dealer
+            {r.monthDealerCount === 1 ? "" : "s"}. {r.monthDealerCount === 1 ? "That dealer" : "Those dealers"} bought{" "}
             <b>{inr(r.monthDesigns)}</b> of the newly displayed tiles in {monthName(month)}
             {r.monthDealers ? <> (out of {inr(r.monthDealers)} they bought in all)</> : null}. This is the {monthName(month)} column of the {monthName(month)} Display
             Tracker Report.
