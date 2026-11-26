@@ -7,7 +7,7 @@
 //   add    <email> "<Name>" rmi   "<RMI name as in RMI>"    e.g. "Samrat Dutta"
 //   import <file.csv>        columns: email,name,role,scope   (scope = zone or RMI name; blank for admin)
 //   reset  <email>           new random password (copied to the clipboard)
-//   set-password <email>     type a password you choose (asked on the keyboard)
+//   set-password <email> [--show]   type a password you choose (hidden; --show displays it as you type)
 //   disable <email> | enable <email>
 //
 // New passwords are printed once. Give each person their own; they are stored only as hashes.
@@ -37,6 +37,36 @@ function showPassword(email: string, password: string): string {
   return `password: ${password}`;
 }
 type Role = (typeof ROLES)[number];
+
+/** Reads a line from the keyboard without showing it (raw mode). Enter finishes, Backspace deletes, Ctrl-C cancels. */
+function askHidden(prompt: string): Promise<string> {
+  const stdin = process.stdin;
+  if (!stdin.isTTY) throw new Error("Run this in a terminal: the password is typed at the prompt");
+  process.stdout.write(prompt);
+  return new Promise((resolve, reject) => {
+    let value = "";
+    stdin.setRawMode(true);
+    stdin.resume();
+    stdin.setEncoding("utf8");
+    const done = (err?: Error) => {
+      stdin.setRawMode(false);
+      stdin.pause();
+      stdin.off("data", onData);
+      process.stdout.write("\n");
+      if (err) reject(err);
+      else resolve(value);
+    };
+    const onData = (chunk: string) => {
+      for (const ch of chunk) {
+        if (ch === "\r" || ch === "\n") return done();
+        if (ch === "\u0003") return done(new Error("Cancelled"));
+        if (ch === "\u007f" || ch === "\b") value = value.slice(0, -1);
+        else if (ch >= " ") value += ch;
+      }
+    };
+    stdin.on("data", onData);
+  });
+}
 
 async function known(): Promise<{ zones: Set<string>; rmis: Set<string> }> {
   const t = tables();
@@ -105,10 +135,19 @@ async function main() {
   }
   if (cmd === "set-password") {
     // Asks for the password on the keyboard, so it never lands in shell history, logs or chat.
-    const { createInterface } = await import("node:readline/promises");
-    const rl = createInterface({ input: process.stdin, output: process.stdout });
-    const pw = (await rl.question(`New password for ${a[0]}: `)).trim();
-    rl.close();
+    // --show: echo what is typed (easier to check, but visible on screen)
+    const show = process.argv.includes("--show");
+    const pw = (
+      show
+        ? await (async () => {
+            const { createInterface } = await import("node:readline/promises");
+            const rl = createInterface({ input: process.stdin, output: process.stdout });
+            const v = await rl.question(`New password for ${a[0]} (shown as you type): `);
+            rl.close();
+            return v;
+          })()
+        : await askHidden(`New password for ${a[0]} (hidden as you type): `)
+    ).trim();
     if (pw.length < 8) throw new Error("Use at least 8 characters");
     const r = await db.update(t.appUser).set({ passwordHash: hashPassword(pw), updatedAt: new Date().toISOString() }).where(eq(t.appUser.email, a[0].toLowerCase())).returning({ e: t.appUser.email });
     console.log(r.length ? `${a[0]}: password set (run npm run publish to apply it on the website)` : `No user ${a[0]}`);
