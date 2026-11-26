@@ -98,8 +98,8 @@ export function FilterBar({
         {showSales && (
           <div className="seg" role="group" aria-label="Which customers count">
             {[
-              ["", "Total", "Every domestic customer, as in the Sales data MIS"],
-              ["retail", "Retail", "Leaves out Key Accounts (SAP Customer Group 2 = Key Account)"],
+              ["", "Total", "Every customer: retail, key accounts and export"],
+              ["retail", "Retail", "Leaves out Key Accounts (SAP Customer Group 2) and export (sales org 1802)"],
             ].map(([v, l, tip]) => (
               <button key={v} onClick={() => set("scope", v ? [v] : [])} aria-pressed={retail === !!v} title={tip}>
                 {l}

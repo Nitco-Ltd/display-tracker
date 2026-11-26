@@ -1,0 +1,1 @@
+ALTER TABLE "sap_billing_item" ADD COLUMN "exchange_rate" double precision;

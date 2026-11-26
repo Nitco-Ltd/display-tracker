@@ -63,12 +63,18 @@ export async function syncSap(opts: { full?: boolean; forceMaterials?: boolean }
       try {
         // Zone (sales district), region office and Customer Group 2 per customer. A customer has one sales area per
         // distribution channel; tiles are invoiced on channel 12, so its group wins when channels disagree.
-        const area = new Map<string, { salesDistrict: string | null; salesOffice: string | null; customerGroup: string | null }>();
+        // Market: "export" when the customer only has sales areas in the export org(s) (1802, Master Zone PZ).
+        const exportOrgs = new Set(csv(config().SAP_EXPORT_SALES_ORGS));
+        const area = new Map<string, { salesDistrict: string | null; salesOffice: string | null; customerGroup: string | null; market: string | null }>();
         try {
           for await (const page of sap.customerSalesAreas())
             for (const a of page) {
-              const cur = area.get(a.customer);
+              const market = exportOrgs.has(a.salesOrg ?? "") ? "export" : "domestic";
+              const prev = area.get(a.customer);
+              if (prev?.market === "domestic" && market === "export") continue; // a domestic customer stays domestic
+              const cur = prev?.market === market ? prev : undefined; // merge only areas of the same market
               area.set(a.customer, {
+                market,
                 salesDistrict: cur?.salesOffice ? cur.salesDistrict : (a.salesDistrict ?? cur?.salesDistrict ?? null),
                 salesOffice: cur?.salesOffice ?? a.salesOffice,
                 customerGroup: a.channel === "12" && a.customerGroup ? a.customerGroup : (cur?.customerGroup ?? a.customerGroup),
@@ -82,7 +88,7 @@ export async function syncSap(opts: { full?: boolean; forceMaterials?: boolean }
             t.sapCustomer,
             page.map((c) => ({ ...c, ...(area.get(c.customer) ?? {}), lastSeenAt: startedAt })),
             t.sapCustomer.customer,
-            area.size ? {} : { keep: ["salesDistrict", "salesOffice", "customerGroup"] },
+            area.size ? {} : { keep: ["salesDistrict", "salesOffice", "customerGroup", "market"] },
           );
           customers += page.length;
         }
@@ -124,6 +130,33 @@ export async function syncSap(opts: { full?: boolean; forceMaterials?: boolean }
     await run.fail(e);
     throw e;
   }
+}
+
+export interface DocTypeRules {
+  sales: Set<string>;
+  returns: Set<string>;
+  valueOnly: Set<string>;
+  extra: Set<string>;
+  extraValueOnly: Set<string>;
+}
+
+/** How an invoice line counts: sign (+1 sale, −1 return/credit, 0 ignored), whether it is an undecided "extra" type, and
+ *  whether only its value counts. A cancellation document (S1/S2/S3) counts in the bucket of the document it cancels,
+ *  with the opposite sign (an S3 cancelling a ZTDN debit note is an extra, not a return); if that document isn't known,
+ *  its own type decides. */
+export function lineTreatment(type: string, cancelsType: string | undefined, r: DocTypeRules): { isExtra: boolean; isValueOnly: boolean; sign: number } {
+  const t = cancelsType ?? type;
+  const isExtra = r.extra.has(t) || r.extraValueOnly.has(t);
+  const isValueOnly = r.valueOnly.has(t) || r.extraValueOnly.has(t);
+  const sign = r.sales.has(t) || isExtra ? 1 : r.returns.has(t) || isValueOnly ? -1 : 0;
+  return { isExtra, isValueOnly, sign: cancelsType ? -sign : sign };
+}
+
+/** A line's net amount in rupees: foreign-currency invoices (export) converted at the invoice's own exchange rate. */
+export function toInr(l: { netAmount: number | null; currency: string | null; exchangeRate: number | null }): number {
+  const amount = l.netAmount ?? 0;
+  if (!l.currency || l.currency === "INR") return amount;
+  return amount * (l.exchangeRate ?? 0);
 }
 
 export async function rebuildMonthlySales(): Promise<{ rows: number; noVolume: number }> {
@@ -170,11 +203,12 @@ export async function rebuildMonthlySales(): Promise<{ rows: number; noVolume: n
   type CAcc = Amounts & { customer: string; month: string };
   const cust = new Map<string, CAcc>();
   let noVolume = 0;
-  for (const l of await db.select().from(t.sapBillingItem)) {
+  const rules: DocTypeRules = { sales, returns, valueOnly, extra, extraValueOnly };
+  const lines = await db.select().from(t.sapBillingItem);
+  const typeOfDoc = new Map(lines.map((l) => [l.billingDocument, l.docType]));
+  for (const l of lines) {
     if ((l.isCancelled && !includeCancelled) || !l.soldTo || !l.material || !l.billingDate || !l.docType) continue;
-    const isExtra = extra.has(l.docType) || extraValueOnly.has(l.docType);
-    const isValueOnly = valueOnly.has(l.docType) || extraValueOnly.has(l.docType);
-    const sign = sales.has(l.docType) || isExtra ? 1 : returns.has(l.docType) || isValueOnly ? -1 : 0;
+    const { isExtra, isValueOnly, sign } = lineTreatment(l.docType, (l.cancelledDocument && typeOfDoc.get(l.cancelledDocument)) || undefined, rules);
     if (!sign) continue;
     let vol: number | null = null;
     if (isValueOnly) vol = 0;
@@ -183,7 +217,7 @@ export async function rebuildMonthlySales(): Promise<{ rows: number; noVolume: n
     if (vol === null) noVolume++;
     const isProject = projectLocations.has(l.storageLocation ?? "");
     const v = sign * (vol ?? 0);
-    const val = sign * (l.netAmount ?? 0);
+    const val = sign * toInr(l);
     const key = `${l.soldTo}|${l.material}|${l.billingDate.slice(0, 7)}`;
     const a = acc.get(key) ?? { dealerCode: l.soldTo, materialCode: l.material, month: l.billingDate.slice(0, 7), ...zero(), lineCount: 0, volumeIncomplete: 0 };
     addLine(a, isExtra, isProject, v, val);

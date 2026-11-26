@@ -173,7 +173,7 @@ export function addSummarySheet(wb: ExcelJS.Workbook, cohort: string, f: FunnelR
   title.font = { bold: true, size: 14 };
   ws.addRow([opts.includeExtra ? "Sales include ZTDN, ZNTI and ZDMS invoices." : "Sales: SAP tile invoices net of returns and credit notes (ZTDN, ZNTI, ZDMS not included), as in the Sales data MIS."]);
   ws.addRow([
-    `Customers: ${opts.retailOnly ? "Retail (Key Accounts left out, by SAP Customer Group 2)" : "Total (every domestic customer)"}. Project dealers: ${opts.withoutProjectDealers ? "left out (storage locations F-KA, S-KA)" : "included"}.`,
+    `Customers: ${opts.retailOnly ? "Retail (Key Accounts and export left out)" : "Total (retail, key accounts and export)"}. Project dealers: ${opts.withoutProjectDealers ? "left out (storage locations F-KA, S-KA)" : "included"}.`,
   ]);
   ws.addRow([]);
   const head = (text: string) => {

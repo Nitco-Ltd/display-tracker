@@ -1,0 +1,1 @@
+ALTER TABLE "sap_customer" ADD COLUMN "market" text;

@@ -31,6 +31,7 @@ const schema = z.object({
   SAP_TLS_CA_FILE: z.string().optional(), // e.g. ./certs/sap-prd.pem
   SAP_TLS_SERVERNAME: z.string().optional(), // e.g. vhntops4ci.sap.nitco.in
   SAP_SALES_ORGS: z.string().default(""), // comma list; blank = all
+  SAP_EXPORT_SALES_ORGS: z.string().default("1802"), // export (Master Zone PZ): in Total, not in Retail
   // Billing document types. PENDING CONFIRMATION by the SAP team (docs/sap-api.md §4.6).
   SAP_SALES_DOC_TYPES: z.string().default("F2"),
   SAP_RETURN_DOC_TYPES: z.string().default("RE,G2"), // quantity and value come back (returns)

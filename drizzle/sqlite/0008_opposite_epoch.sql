@@ -1,0 +1,1 @@
+ALTER TABLE `sap_billing_item` ADD `exchange_rate` real;

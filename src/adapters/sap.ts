@@ -34,7 +34,9 @@ export interface SapBillingLine {
   taxAmount: number | null;
   storageLocation: string | null; // F-KA / S-KA = project-dealer sales (SAP_PROJECT_STORAGE_LOCATIONS)
   currency: string | null;
+  exchangeRate: number | null; // INR per unit of `currency` (1 for INR invoices)
   isCancelled: boolean;
+  cancelledDocument: string | null; // for cancellation documents (S1/S2/S3): the billing document they cancel
   lastChange: string | null; // ISO timestamp
 }
 
@@ -72,6 +74,12 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
 const str = (v: unknown): string | null => (v === null || v === undefined || v === "" ? null : String(v).trim());
 
 /** SAP often strips leading zeros on customer numbers in OData (ALPHA conversion). RMI uses 10 digits. */
+/** SAP's accounting exchange rate as rupees per unit of the invoice currency. */
+export function exchangeRateToInr(rate: number | null, indirect: boolean): number | null {
+  if (rate === null || !Number.isFinite(rate) || rate <= 0) return null;
+  return indirect ? 1 / rate : rate;
+}
+
 export function padCustomer(v: string | null): string | null {
   return v && /^\d+$/.test(v) ? v.padStart(10, "0") : v;
 }
@@ -160,7 +168,7 @@ export class SapClient {
       $select: [
         "BillingDocument", "BillingDocumentType", "SDDocumentCategory", "BillingDocumentDate", "SoldToParty",
         "SalesOrganization", "DistributionChannel", "Division", "BillingDocumentIsCancelled", "TransactionCurrency",
-        "LastChangeDateTime",
+        "LastChangeDateTime", "AbsltAccountingExchangeRate", "AcctgExchangeRateIsIndrctQtan", "CancelledBillingDocument",
         "to_Item/BillingDocumentItem", "to_Item/Material", "to_Item/BillingQuantity", "to_Item/BillingQuantityUnit",
         "to_Item/BillingQuantityInBaseUnit", "to_Item/BaseUnit", "to_Item/NetAmount", "to_Item/TaxAmount", "to_Item/StorageLocation",
       ].join(","),
@@ -191,7 +199,10 @@ export class SapClient {
             taxAmount: num(it.TaxAmount),
             storageLocation: str(it.StorageLocation),
             currency: str(h.TransactionCurrency),
+            // Rupees per unit of the invoice currency (export invoices are often in USD); SAP may quote it indirectly.
+            exchangeRate: exchangeRateToInr(num(h.AbsltAccountingExchangeRate), h.AcctgExchangeRateIsIndrctQtan === true),
             isCancelled: h.BillingDocumentIsCancelled === true || h.BillingDocumentIsCancelled === "X",
+            cancelledDocument: str(h.CancelledBillingDocument), // set on S1/S2/S3: the document this one cancels
             lastChange: odataDate(h.LastChangeDateTime)?.toISOString() ?? null,
           });
         }
@@ -253,7 +264,7 @@ export class SapClient {
   /** Each customer's sales district (zone, e.g. EZ1), sales office (region, e.g. BH1) and Customer Group 2
    *  (09 Key Account, 12 Retail Project, 10 Retail, …) per distribution channel in the sales org(s). */
   async *customerSalesAreas(): AsyncGenerator<
-    { customer: string; channel: string | null; salesDistrict: string | null; salesOffice: string | null; customerGroup: string | null }[]
+    { customer: string; salesOrg: string | null; channel: string | null; salesDistrict: string | null; salesOffice: string | null; customerGroup: string | null }[]
   > {
     const orgs = csv(config().SAP_SALES_ORGS);
     const params: Record<string, string> = { $select: "Customer,SalesOrganization,DistributionChannel,SalesDistrict,SalesOffice,AdditionalCustomerGroup2" };
@@ -261,6 +272,7 @@ export class SapClient {
     for await (const page of this.pages("API_BUSINESS_PARTNER/A_CustomerSalesArea", params, 5000)) {
       yield page.map((r) => ({
         customer: padCustomer(str(r.Customer))!,
+        salesOrg: str(r.SalesOrganization),
         channel: str(r.DistributionChannel),
         salesDistrict: str(r.SalesDistrict),
         salesOffice: str(r.SalesOffice),

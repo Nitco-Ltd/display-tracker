@@ -134,3 +134,37 @@ describe("SAP sync (fixture)", () => {
     expect(new Set(methods)).toEqual(new Set(["GET"]));
   });
 });
+
+describe("export invoices in foreign currency", () => {
+  it("converts USD lines to rupees at the invoice's exchange rate; INR lines stay as they are", async () => {
+    const { toInr } = await import("@/sync/sap-sync");
+    expect(toInr({ netAmount: 1000, currency: "USD", exchangeRate: 88.5 })).toBe(88500);
+    expect(toInr({ netAmount: 1000, currency: "INR", exchangeRate: null })).toBe(1000);
+  });
+  it("reads SAP's rate the right way round when it is quoted indirectly", async () => {
+    const { exchangeRateToInr } = await import("@/adapters/sap");
+    expect(exchangeRateToInr(88.5, false)).toBe(88.5);
+    expect(exchangeRateToInr(0.0113, true)).toBeCloseTo(88.5, 0);
+    expect(exchangeRateToInr(null, false)).toBeNull();
+  });
+});
+
+describe("cancellation documents", () => {
+  const rules = {
+    sales: new Set(["ZVDT", "S2"]),
+    returns: new Set(["ZRTI", "S1", "S3"]),
+    valueOnly: new Set(["ZCBR"]),
+    extra: new Set(["ZNTI"]),
+    extraValueOnly: new Set(["ZTDN"]),
+  };
+  it("count in the bucket of the document they cancel, with the opposite sign", async () => {
+    const { lineTreatment } = await import("@/sync/sap-sync");
+    expect(lineTreatment("S3", "ZTDN", rules)).toEqual({ isExtra: true, isValueOnly: true, sign: -1 }); // cancelled debit note
+    expect(lineTreatment("S1", "ZVDT", rules)).toEqual({ isExtra: false, isValueOnly: false, sign: -1 }); // cancelled invoice
+    expect(lineTreatment("S2", "ZRTI", rules)).toEqual({ isExtra: false, isValueOnly: false, sign: 1 }); // cancelled return
+  });
+  it("fall back to their own type when the cancelled document isn't known", async () => {
+    const { lineTreatment } = await import("@/sync/sap-sync");
+    expect(lineTreatment("S3", undefined, rules)).toEqual({ isExtra: false, isValueOnly: false, sign: -1 });
+  });
+});

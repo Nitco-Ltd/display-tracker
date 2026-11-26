@@ -123,6 +123,8 @@ export const sapBillingItem = sqliteTable(
     netAmount: real("net_amount"),
     taxAmount: real("tax_amount"),
     storageLocation: text("storage_location"), // F-KA / S-KA = project-dealer sales
+    cancelledDocument: text("cancelled_document"), // S1/S2/S3: the document they cancel (counted in its bucket, opposite sign)
+    exchangeRate: real("exchange_rate"), // INR per unit of currency (export invoices in USD); amounts are converted with it
     currency: text("currency"),
     isCancelled: integer("is_cancelled").notNull().default(0),
     lastChange: text("last_change"),
@@ -155,6 +157,7 @@ export const sapCustomer = sqliteTable("sap_customer", {
   salesDistrict: text("sales_district"), // zone code, e.g. EZ1 (customer sales area, sales org 1801)
   salesOffice: text("sales_office"), // region office, e.g. BH1 / BH2 / BHC = Bihar
   customerGroup: text("customer_group"), // SAP Customer Group 2: 09 Key Account, 12 Retail Project, 10 Retail, … (see sales/customers.ts)
+  market: text("market"), // "domestic" or "export" (only has a sales area in SAP_EXPORT_SALES_ORGS)
   createdOn: text("created_on"),
   deleted: integer("deleted").notNull().default(0),
   lastSeenAt: text("last_seen_at").notNull(),

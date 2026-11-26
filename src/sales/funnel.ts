@@ -75,7 +75,7 @@ const majority = (m: Map<string, number>) => [...m].sort((a, b) => b[1] - a[1])[
 export async function customerGeo(): Promise<Map<string, Geo>> {
   const t = tables();
   const db = getDb();
-  const cust = await db.select({ c: t.sapCustomer.customer, d: t.sapCustomer.salesDistrict, o: t.sapCustomer.salesOffice }).from(t.sapCustomer);
+  const cust = await db.select({ c: t.sapCustomer.customer, d: t.sapCustomer.salesDistrict, o: t.sapCustomer.salesOffice, m: t.sapCustomer.market }).from(t.sapCustomer);
   const disp = await db.select({ d: t.rmiDisplay.dealerCode, z: t.rmiDisplay.zone, r: t.rmiDisplay.region }).from(t.rmiDisplay);
   const byCust = new Map(cust.map((c) => [c.c, c]));
   const zv = new Map<string, Map<string, number>>();
@@ -88,6 +88,10 @@ export async function customerGeo(): Promise<Map<string, Geo>> {
   }
   const out = new Map<string, Geo>();
   for (const c of cust) {
+    if (c.m === "export") {
+      out.set(c.c, { zone: "Export", region: "Export (PZ)" });
+      continue;
+    }
     out.set(c.c, {
       zone: (c.d && zv.has(c.d) ? majority(zv.get(c.d)!) : c.d) || "Unknown",
       region: (c.o && rv.has(c.o) ? majority(rv.get(c.o)!) : c.o) || "Unknown",

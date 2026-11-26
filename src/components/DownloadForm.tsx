@@ -47,7 +47,7 @@ export function DownloadForm({ options, initialMonth }: { options: FilterOptions
           label="Customers"
           options={[
             { value: "total", label: "Total" },
-            { value: "retail", label: "Retail (without key accounts)" },
+            { value: "retail", label: "Retail (without key accounts, export)" },
           ]}
           selected={v.scope?.length ? v.scope : ["total"]}
           onChange={(vals) => set("scope")(vals.includes("retail") ? ["retail"] : [])}

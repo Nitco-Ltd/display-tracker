@@ -24,7 +24,7 @@ The detail behind the README: every command, exactly how the numbers are calcula
 
 | Invoice type | Counts as |
 |---|---|
-| ZVDT, ZSCR, ZMAR, S2 | Sale: + quantity, + value |
+| ZVDT, ZSCR, ZMAR, S2, ZEXO (export) | Sale: + quantity, + value |
 | ZRTI, S1, S3 | Return / cancellation: − quantity, − value |
 | ZCBR, ZCPD, ZCQC | Credit note: − value only |
 | ZTDN, ZNTI, ZDMS | Not counted by default; the **More filters → Include debit notes & samples** switch adds them (and every report also comes in an `_incl_ZTDN_ZNTI_ZDMS` version) |
@@ -36,7 +36,11 @@ A line is a tile when its division is 02 or its material code starts with `TI`. 
 
 **Same tile, new box.** A tile code ends in two digits for tiles per box plus a serial (`TIGVMPL1200X600NOGL` `02` `160`: 2 tiles a box). When NITCO changes the box, the tile gets a new code (Oyster Blue Onyx `…02160` → `…03021`). Codes count as one tile when both are tile codes with the same design name and are identical up to the trailing number; "Not to use" codes never merge. The daily sync warns if two codes with the same box size both sell, so they can be checked with sales ops.
 
-**Total vs Retail only.** Every page and the report have a switch. *Total* counts every customer (as the Sales data MIS). *Retail only* leaves out customers whose SAP Customer Group 2 is **09 Key Account** or **12 Retail Project**; Retail, Le Studio Express, Multi Brand Outlet, Nitco Look, Galore, Others and One Time Customer stay in. The group comes from the customer master (refreshed weekly; `npm run sync:sap -- --materials` refreshes it now). Checked against the Sep-2026 register: Retail only ₹3.15 Cr in both.
+**Total · Retail.** *Total* = Retail + Key Accounts + Export, as NITCO's monthly Retail / Key / Export summary. *Retail* leaves out customers whose SAP Customer Group 2 is **09 Key Account**, and export customers (sales org **1802**, Master Zone PZ). Export invoices (ZEXO) in USD/EUR are converted to rupees at each invoice's own exchange rate. Checked against the Apr–Oct 2026 summary: every month within 0.5% in value and sq m.
+
+**With · Without project dealers.** *Without* leaves out invoice lines whose storage location (SLoc) is **F-KA** or **S-KA** (`SAP_PROJECT_STORAGE_LOCATIONS`). Returns come back into SLoc RMRN, so they stay in, exactly as filtering the register's SLoc column.
+
+**Cancellations.** A cancellation document (S1/S2/S3) counts in the same bucket as the document it cancels, with the opposite sign: a cancelled invoice reduces sales; a cancelled ZTDN debit note only affects the "incl. debit notes & samples" figure.
 
 **Same dealer, several accounts.** SAP accounts with the same GST number and PIN code count as one dealer (NITCO's own depots never). The report's second sheet lists which accounts and codes were counted.
 

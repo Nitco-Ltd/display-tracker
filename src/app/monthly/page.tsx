@@ -179,7 +179,7 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
         share={r.total ? r.displayedDesigns / r.total : undefined}
         shareCaption="of it was a tile on display"
         stats={[
-          { label: retailOnly ? "Retail sales" : "All sales", value: inrCompact(r.total), sub: `${retailOnly ? "without key accounts" : "all customers"}${salesOpts.withoutProjectDealers ? " · without project dealers" : ""}${includeExtra ? " · incl. debit notes & samples" : ""}` },
+          { label: retailOnly ? "Retail sales" : "All sales", value: inrCompact(r.total), sub: `${retailOnly ? "without key accounts and export" : "retail + key accounts + export"}${salesOpts.withoutProjectDealers ? " · without project dealers" : ""}${includeExtra ? " · incl. debit notes & samples" : ""}` },
           { label: "Dealers with a display", value: inrCompact(r.displayDealers), sub: `${pct(pctA(r.displayDealers))} of sales · ${num(r.displayDealerCount)} dealers` },
           { label: "Tiles on display", value: inrCompact(r.displayedDesigns), sub: `${pct(pctA(r.displayedDesigns))} of sales` },
           { label: "New displays", value: num(r.monthDisplays), sub: `at ${num(r.monthDealerCount)} dealer${r.monthDealerCount === 1 ? "" : "s"}` },
