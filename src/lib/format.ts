@@ -24,7 +24,28 @@ export const m2 = (n: number) => `${intl0.format(n)} m²`;
 /** 0.1234 -> "12.3%" */
 export const pct = (n: number) => (Number.isFinite(n) ? `${intl1.format(n * 100)}%` : "–");
 
+// Month labels. A fixed list on purpose: locale month names vary ("Sept" in en-GB), the report needs "Sep".
+export const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const ymParts = (ym: string) => ym.split("-").map(Number) as [number, number];
+
+/** "2026-07" -> "Jul 2026" (pages, filters) */
 export function monthName(ym: string): string {
-  const [y, m] = ym.split("-").map(Number);
-  return `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][m - 1]} ${y}`;
+  const [y, m] = ymParts(ym);
+  return `${MONTH_ABBR[m - 1]} ${y}`;
 }
+
+/** "2026-07" -> "Jul-26" (report column headers) */
+export function monthLabel(ym: string): string {
+  const [y, m] = ymParts(ym);
+  return `${MONTH_ABBR[m - 1]}-${String(y).slice(2)}`;
+}
+
+/** "2026-07" -> "Jul-2026" (RMI's own month picker and report file names) */
+export function monthYear(ym: string): string {
+  const [y, m] = ymParts(ym);
+  return `${MONTH_ABBR[m - 1]}-${y}`;
+}
+
+/** Number formats a chart can be told to use by name (server pages can't pass functions to client components). */
+export const CHART_FORMATS = { inr: inrCompact, num, m2, pct } as const;
+export type ChartFormat = keyof typeof CHART_FORMATS;

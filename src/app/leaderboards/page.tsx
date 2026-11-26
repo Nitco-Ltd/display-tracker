@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { FilterBar } from "@/components/FilterBar";
-import { Section } from "@/components/Kpi";
+import { Section } from "@/components/Section";
 import { PageHeader } from "@/components/PageHeader";
 import { ParamLinks } from "@/components/SortLinks";
 import { Tabs } from "@/components/Tabs";

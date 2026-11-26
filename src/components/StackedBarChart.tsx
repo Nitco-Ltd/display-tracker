@@ -3,11 +3,10 @@
 // 2px surface gaps between parts, 4px rounded top, a legend that names every part, a hover tooltip on every column,
 // the tallest bar labelled. Bars grow from the baseline on first paint (off for reduced motion).
 import { useState } from "react";
-import { inrCompact, num, pct } from "@/lib/format";
-import { LegendItem } from "./Kpi";
+import { CHART_FORMATS, type ChartFormat } from "@/lib/format";
+import { LegendItem } from "./Section";
 import { niceTicks, useWidth } from "./useWidth";
 
-const FORMATS = { inr: inrCompact, num, pct } as const;
 
 export interface StackPart {
   key: string;
@@ -30,13 +29,13 @@ export function StackedBarChart({
 }: {
   parts: StackPart[];
   bars: StackBar[];
-  format?: keyof typeof FORMATS;
+  format?: ChartFormat;
   height?: number;
   ariaLabel: string;
 }) {
   const [ref, W] = useWidth<HTMLDivElement>();
   const [hover, setHover] = useState<number | null>(null);
-  const fmt = FORMATS[format];
+  const fmt = CHART_FORMATS[format];
   const H = height;
   const pad = { t: 22, r: 4, b: 26, l: 48 };
   const totals = bars.map((b) => b.values.reduce((a, v) => a + Math.max(0, v), 0));

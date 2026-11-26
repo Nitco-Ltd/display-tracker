@@ -189,19 +189,47 @@ export function groupStats(
   });
 }
 
-export interface TrendPoint {
-  month: string;
+/** What happened to the displays (each dealer + tile + month once): checked = tile in SAP and a month old. */
+export interface Outcomes {
   displays: number;
-  measurablePairs: number;
-  conversion: number;
-  afterValue: number;
+  unmatched: number; // tile not found in SAP
+  tooNew: number; // put up this month
+  checked: number;
+  bought: number;
+  rate: number; // bought / checked
 }
 
-export function monthlyTrend(rows: DisplayWithSales[], cur = currentMonth()): TrendPoint[] {
-  return groupStats(rows, (r) => r.cohortMonth, undefined, cur)
-    .filter((g) => g.key !== "(blank)" && g.key <= cur)
-    .sort((a, b) => a.key.localeCompare(b.key))
-    .map((g) => ({ month: g.key, displays: g.displays, measurablePairs: g.measurablePairs, conversion: g.conversion, afterValue: g.afterValue }));
+export function outcomes(pairs: DisplayWithSales[], cur = currentMonth()): Outcomes {
+  const checked = pairs.filter((r) => isMeasurable(r, cur));
+  const bought = checked.filter((r) => isConverted(r, cur)).length;
+  const unmatched = pairs.filter((r) => !isLinked(r)).length;
+  return {
+    displays: pairs.length,
+    unmatched,
+    tooNew: pairs.length - unmatched - checked.length,
+    checked: checked.length,
+    bought,
+    rate: checked.length ? bought / checked.length : NaN,
+  };
+}
+
+/** Outcomes by the month the display was put up, oldest first. Near-empty months at the start (a handful of early
+ *  test entries, under 3% of the busiest month) are left out so a chart starts where displays did. */
+export function outcomesByMonth(pairs: DisplayWithSales[], cur = currentMonth()): { month: string; o: Outcomes }[] {
+  const byMonth = new Map<string, DisplayWithSales[]>();
+  for (const r of pairs) if (r.cohortMonth && r.cohortMonth <= cur) (byMonth.get(r.cohortMonth) ?? byMonth.set(r.cohortMonth, []).get(r.cohortMonth)!).push(r);
+  const sorted = [...byMonth.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([month, rs]) => ({ month, o: outcomes(rs, cur) }));
+  const peak = Math.max(0, ...sorted.map((m) => m.o.displays));
+  return sorted.slice(Math.max(0, sorted.findIndex((m) => m.o.displays >= peak * 0.03)));
+}
+
+/** Month before display vs the average of the three months after (per display). `change` is after ÷ before − 1. */
+export function beforeVsAfter(points: BeforeAfterPoint[]): { before: number; after: number; change: number } {
+  const before = points.find((p) => p.offset === -1)?.avgValue ?? NaN;
+  const after3 = points.filter((p) => p.offset >= 1 && p.offset <= 3 && Number.isFinite(p.avgValue));
+  const after = after3.length ? after3.reduce((a, p) => a + p.avgValue, 0) / after3.length : NaN;
+  const change = Number.isFinite(before) && before > 0 && Number.isFinite(after) ? after / before - 1 : NaN;
+  return { before, after, change };
 }
 
 /** Linked displays with no sales in M+1 … M+N, where M+N has already started. */

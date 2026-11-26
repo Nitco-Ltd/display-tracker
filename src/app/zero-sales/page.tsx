@@ -1,11 +1,12 @@
 import { Suspense } from "react";
 import { FilterBar } from "@/components/FilterBar";
-import { Section } from "@/components/Kpi";
+import { Section } from "@/components/Section";
 import { PageHeader } from "@/components/PageHeader";
 import { ParamLinks } from "@/components/SortLinks";
 import { DisplayTable } from "@/components/DisplayTable";
 import { Icon } from "@/components/Icon";
 import { filterOptions, loadRows, type SearchParams } from "@/analytics/data";
+import { toQuery } from "@/lib/params";
 import { currentMonth, zeroSales } from "@/analytics/metrics";
 import { num } from "@/lib/format";
 
@@ -16,9 +17,7 @@ export default async function ZeroSales({ searchParams }: { searchParams: Promis
   const n = CHOICES.includes(Number(sp.n)) ? Number(sp.n) : 3;
   const [rows, options] = await Promise.all([loadRows(sp), filterOptions()]);
   const list = zeroSales(rows, n, currentMonth());
-  const qs = new URLSearchParams();
-  for (const [k, v] of Object.entries(sp)) for (const x of Array.isArray(v) ? v : v ? [v] : []) if (k !== "page") qs.append(k, x);
-  qs.set("zero", String(n));
+  const exportQuery = toQuery(sp, { omit: ["page"], set: { zero: String(n) } });
 
   return (
     <>
@@ -43,7 +42,7 @@ export default async function ZeroSales({ searchParams }: { searchParams: Promis
         title="Displays to follow up"
         note={`Only displays up for ${n} full month${n > 1 ? "s" : ""} or more, with a tile found in SAP.`}
         action={
-          <a href={`/api/export?${qs.toString()}`} className="btn btn-primary">
+          <a href={`/api/export?${exportQuery}`} className="btn btn-primary">
             <Icon name="download" size={16} />
             Excel
           </a>

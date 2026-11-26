@@ -2,10 +2,9 @@
 // Single-series line chart (SVG): 2px line, 8px markers, recessive grid with y-axis labels, hover crosshair + tooltip,
 // direct labels on first / last / highest point. Points marked `faint` (e.g. too few displays to trust) are drawn hollow.
 import { useState } from "react";
-import { inrCompact, m2, num, pct } from "@/lib/format";
+import { CHART_FORMATS, type ChartFormat } from "@/lib/format";
 import { niceTicks, useWidth } from "./useWidth";
 
-const FORMATS = { inr: inrCompact, num, m2, pct } as const;
 
 export interface LinePoint {
   key: string;
@@ -24,7 +23,7 @@ export function LineChart({
   baselineIndex,
 }: {
   points: LinePoint[];
-  format: keyof typeof FORMATS;
+  format: ChartFormat;
   height?: number;
   ariaLabel: string;
   xTitle?: string;
@@ -32,7 +31,7 @@ export function LineChart({
 }) {
   const [ref, W] = useWidth<HTMLDivElement>();
   const [hover, setHover] = useState<number | null>(null);
-  const fmt = FORMATS[formatName];
+  const fmt = CHART_FORMATS[formatName];
   const H = height;
   const pad = { t: 20, r: 16, b: xTitle ? 42 : 26, l: 56 };
   const vals = points.map((p) => (Number.isFinite(p.value) ? p.value : NaN));

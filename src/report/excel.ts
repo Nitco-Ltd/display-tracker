@@ -2,7 +2,8 @@
 // one sheet "Report" holding one Excel table "Report", columns A–AY, one row per display, in RMI record order.
 // Differences from RMI's file, by design: real numbers and dates (not text), frozen header, widths, number formats.
 import ExcelJS from "exceljs";
-import { allDisplaysWithSales, matchesFilter, monthLabel, MONTH_ABBR, WINDOW_MONTHS, windowMonths, type DisplayWithSales, type SalesOptions } from "@/sales/window";
+import { addMonths, allDisplaysWithSales, matchesFilter, WINDOW_MONTHS, windowMonths, type DisplayWithSales, type SalesOptions } from "@/sales/window";
+import { monthLabel, monthYear } from "@/lib/format";
 import type { ReportFilter } from "./filters";
 import { salesFunnel, type FunnelResult } from "@/sales/funnel";
 
@@ -58,8 +59,7 @@ export function visibleMonths(cohort: string, upTo: string = currentMonth()): st
 
 /** "2026-08" -> "Display_Tracker_Report_-_Aug-2026.xlsx" */
 export function reportFileName(cohort: string, opts: SalesOptions = {}): string {
-  const [y, m] = cohort.split("-").map(Number);
-  return `Display_Tracker_Report_-_${MONTH_ABBR[m - 1]}-${y}${opts.includeExtra ? "_incl_ZTDN_ZNTI_ZDMS" : ""}.xlsx`;
+  return `Display_Tracker_Report_-_${monthYear(cohort)}${opts.includeExtra ? "_incl_ZTDN_ZNTI_ZDMS" : ""}.xlsx`;
 }
 
 export function buildWorkbook(cohort: string | null, rows: DisplayWithSales[], upTo: string = currentMonth()): ExcelJS.Workbook {
@@ -199,7 +199,7 @@ export function addSummarySheet(wb: ExcelJS.Workbook, cohort: string, f: FunnelR
   head("3. The month columns in the Report sheet");
   const vis = visibleMonths(cohort, upTo);
   const notes = [
-    `Every display is followed for 14 months: ${monthLabel(addMonth(cohort, -1))} (the month before it was put up), ${monthLabel(cohort)} (the display month) and the 12 months after (to ${monthLabel(addMonth(cohort, 12))}).`,
+    `Every display is followed for 14 months: ${monthLabel(addMonths(cohort, -1))} (the month before it was put up), ${monthLabel(cohort)} (the display month) and the 12 months after (to ${monthLabel(addMonths(cohort, 12))}).`,
     `Only months that have started are shown (${vis.map(monthLabel).join(", ")}); later months are added automatically as time passes.`,
     "Each column is that dealer's purchases of that displayed tile in that month (all the dealer's SAP accounts, and the tile's packaging variants).",
     "Avg Sales Value = the sum of all 14 months ÷ 14 (RMI's rule), with months not yet reached counted as 0.",
@@ -255,9 +255,4 @@ export function addSummarySheet(wb: ExcelJS.Workbook, cohort: string, f: FunnelR
     }
     ws.addRow([]);
   }
-}
-
-function addMonth(ym: string, n: number): string {
-  const d = new Date(Date.UTC(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)) - 1 + n, 1));
-  return d.toISOString().slice(0, 7);
 }

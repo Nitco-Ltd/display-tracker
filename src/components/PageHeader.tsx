@@ -22,8 +22,3 @@ export function PageHeader({
     </div>
   );
 }
-
-/** A highlighted one-sentence takeaway. */
-export function Insight({ children }: { children: React.ReactNode }) {
-  return <div className="card mb-5 px-4 py-3 text-[13px] leading-relaxed">{children}</div>;
-}

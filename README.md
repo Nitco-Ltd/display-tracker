@@ -1,237 +1,202 @@
 # Display Tracker
 
-Shows whether putting a NITCO design on display at a dealer leads to more sales of that design.
+Shows whether putting a NITCO tile on display at a dealer leads that dealer to order it.
 
-It combines two systems, automatically, every day:
+It combines two systems:
 
-- **RMI app** (rmi.nitco.in): every display an RMI logs (dealer, design, date, panel, …)
-- **SAP** (S4 PRD): that dealer's invoiced sales of that design, month by month
+- **RMI app** (rmi.nitco.in): every display an RMI logs (dealer, tile, date, panel, …)
+- **SAP** (S4 PRD): NITCO's invoices to that dealer for that tile, month by month
 
 and produces:
 
-1. **The monthly Excel report** "Display Tracker Report", in the same layout as RMI's, with real SAP sales.
-2. **A dashboard** in your web browser: overview, before-vs-after, leaderboards, follow-up list, downloads.
+1. **A dashboard** at <https://display-tracker.vercel.app> (sign-in required): overview, monthly sales, rankings, follow-up list, every display, and the report download.
+2. **The monthly Excel report** "Display Tracker Report", in RMI's layout, with sales from SAP.
 
-Nothing is ever written to RMI or SAP: the app only reads.
+Nothing is ever written to RMI or SAP: the app only reads. Dealer sales to end customers are not in SAP; the dealer's orders from NITCO are the measure.
 
 ---
 
 ## Contents
 
-1. [What you need](#1-what-you-need)
+1. [How it runs](#1-how-it-runs)
 2. [Install (once)](#2-install-once)
 3. [Settings: the .env file](#3-settings-the-env-file)
 4. [First run](#4-first-run)
-5. [Use the dashboard](#5-use-the-dashboard)
-6. [Run it every day automatically (Windows Task Scheduler)](#6-run-it-every-day-automatically-windows-task-scheduler)
+5. [The dashboard](#5-the-dashboard)
+6. [Refresh schedule](#6-refresh-schedule)
 7. [Commands](#7-commands)
 8. [How the numbers are calculated](#8-how-the-numbers-are-calculated)
-9. [Update to a new version](#9-update-to-a-new-version)
+9. [Update and deploy](#9-update-and-deploy)
 10. [Troubleshooting](#10-troubleshooting)
 11. [Where things are](#11-where-things-are)
 
 ---
 
-## 1. What you need
+## 1. How it runs
 
-- A Windows PC (a Mac works too) that is **on the NITCO office network or VPN** at the time of the daily run. SAP is only reachable from inside the company network.
-- **Node.js 22 or newer** (free). Download the "LTS" version from <https://nodejs.org> and install it with the default options.
-- An **RMI login that can see all zones**.
-- A **SAP user with read access** to the services `API_BILLING_DOCUMENT_SRV` and `API_PRODUCT_SRV` on client 100 (today: `100661`).
+```
+RMI app ─┐
+         ├─► Mac (sync at 10:00, 14:00, 18:00) ─► data/app.db (SQLite) ─► publish ─► Neon (Postgres) ─► Vercel (website)
+SAP ─────┘        on the NITCO network / VPN
+```
+
+- **The Mac** does all the work: it reads RMI and SAP, stores everything in `data/app.db`, builds the reports, and copies the tables the website needs to the cloud database. SAP is only reachable inside the NITCO network, so the Mac must be on the office network or VPN at those times.
+- **Neon** (Postgres, Singapore) holds the published copy. **Vercel** runs the website and only reads from Neon (`READ_ONLY=1`). SAP and RMI passwords never leave the Mac.
+- If the Mac is off, the website keeps showing the last published data; the header shows **Data as of …**, with an amber warning once it is over 30 hours old.
+
+Details: `docs/go-live-vercel.md` (cloud setup), `docs/deploy.md` (moving the sync to a server).
 
 ## 2. Install (once)
 
-1. Copy the whole project folder to the PC, e.g. to `C:\DisplayTracker`. (Avoid putting the program itself inside OneDrive.)
-2. Open **Command Prompt** (Start menu → type `cmd` → Enter) and go to the folder:
-   ```bat
-   cd /d C:\DisplayTracker
-   ```
-3. Install the program's parts (takes a few minutes the first time):
-   ```bat
-   npm install
-   ```
+You need **Node.js 22+** (LTS from <https://nodejs.org>), an **RMI login that can see all zones**, and a **SAP user with read access** to `API_BILLING_DOCUMENT_SRV` and `API_PRODUCT_SRV` (client 100).
+
+```bash
+git clone <this repository> "Display Tracker" && cd "Display Tracker"
+npm install
+```
 
 ## 3. Settings: the .env file
 
-All settings and passwords live in one file called `.env` in the project folder.
+All settings and passwords live in `.env` in the project folder (never committed).
 
-1. Make a copy of `.env.example` and name it `.env`:
-   ```bat
-   copy .env.example .env
-   ```
-2. Open `.env` in Notepad (`notepad .env`) and fill in the lines that end in `=`:
+```bash
+cp .env.example .env
+```
+
+Fill in the lines that end in `=`:
 
 | Setting | What to put |
 |---|---|
-| `RMI_USER`, `RMI_PASS` | Your RMI login (must see all zones) |
-| `RMI_APP_KEY` | RMI's built-in key. Ask whoever set the app up, or see [Troubleshooting](#rmi-app-key) |
+| `RMI_USER`, `RMI_PASS` | RMI login (must see all zones) |
+| `RMI_APP_KEY` | RMI's built-in key. See [Troubleshooting](#rmi-app-key) |
 | `SAP_USER`, `SAP_PASS` | SAP user and password for client 100 |
-| `REPORT_OUTPUT_DIR` | Folder for the monthly Excel files, e.g. `C:\Users\you\OneDrive - NITCO\Display Tracker Reports` |
-| `ALERT_EMAIL_TO`, `SMTP_*` | Optional: who gets an email if the daily run fails, and the mail server to send it |
+| `PUBLISH_DATABASE_URL` | The Neon connection string (direct, not `-pooler`), so the daily job can publish |
+| `REPORT_OUTPUT_DIR` | Folder for the monthly Excel files |
+| `ALERT_EMAIL_TO`, `SMTP_*` | Optional: who gets an email if the daily run fails |
 
-Everything else is already filled in for NITCO (SAP address, sales rules). Type values right after `=`, with no spaces and no quotes. Save the file.
+Everything else is already set for NITCO (SAP address, sales rules). Type values right after `=`, with no quotes.
 
-> Keep `.env` private. Don't email it or paste its passwords into chats. If a password was ever shared, change it in RMI/SAP and update `.env`.
+> Keep `.env` private. If a password was ever shared, change it in RMI/SAP and update `.env`.
 
 ## 4. First run
 
-In Command Prompt, in the project folder (on the office network or VPN):
+On the office network or VPN:
 
-```bat
-npm run daily
+```bash
+npm run daily     # RMI sync → SAP sync → reports → publish (3–4 min the first time, ~1 min after)
+npm run dev       # the dashboard on this Mac at http://localhost:3000 (no sign-in locally)
 ```
 
-This pulls everything from RMI and SAP (about 3–4 minutes the first time, ~35 seconds after that) and saves the monthly reports. It ends with a line like:
+## 5. The dashboard
 
-```
-DONE: RMI 12136 rows (12136 new, 0 changed), SAP 387327 invoice lines, 13 reports
-```
-
-Then start the dashboard:
-
-```bat
-scripts\windows\start-dashboard.cmd
-```
-
-The first start builds the app (about a minute). Then open **<http://localhost:3000>** in your browser. Leave the black window open while you use the dashboard; closing it stops the dashboard.
-
-## 5. Use the dashboard
-
-The **filters** at the top (display month, zone, region, RMI, dealer, dealer type, product type, size, design, design status, displayed where) apply to every page and are kept in the web address, so you can bookmark or share a filtered view.
+Filters at the top apply to every page and stay in the web address, so a filtered view can be bookmarked or shared. Less-used filters, and the switch that also counts debit notes and samples (ZTDN, ZNTI, ZDMS), are under **More filters**.
 
 | Page | What it's for |
 |---|---|
-| **Overview** | "Do displays lead to sales?": key numbers, a one-line takeaway, the displayed tile's sales month by month from the month before display to 12 months after, and displays / sales / purchase rate by the month the display was put up. |
-| **Rankings** | Zones, RMIs, dealers and tiles (one tab each) ranked by sales after display or by how often the dealer bought the tile afterwards. |
-| **Follow-up** | Displays with no purchase within 1/2/3/6/12 months. Export to Excel. |
-| **Monthly sales** | Pick a sales month and an area: all tile sales there (same as the Sales data MIS), how much went to dealers with displays, and how much was a dealer buying a tile it displays; plus the displays put up that month. By region. |
-| **Displays** | Every display with all report columns and a sales summary. **Export to Excel** exports exactly what's filtered. |
-| **Download report** | The monthly report, like RMI's own report page: pick a month and optional filters, then **Download Excel**. |
+| **Overview** | The share of displays that led to a purchase, the sales that followed, from display to purchase, before vs after, and displays by month. |
+| **Monthly sales** | One sales month: all tile sales (same as the Sales data MIS), split into tiles on display, other tiles bought by the same dealers, and dealers without a display. By region and by tile. |
+| **Rankings** | Zones, RMIs, dealers and tiles ranked by sales after display or by purchase rate. |
+| **Follow-up** | Displays with no purchase within 1/2/3/6/12 months. Excel export. |
+| **Displays** | Every display with its status and sales. Excel export has every report column. |
+| **Report** | The monthly Display Tracker Report: pick a month and filters, then download. |
 
-Top right: when RMI and SAP were last synced, and **Refresh now** (pulls the latest data immediately, ~35 seconds). A **red banner** appears if the last sync failed; an **amber banner** if data is more than 30 hours old.
+**Who sees what.** Admins see everything; a zonal user sees one zone; an RMI sees their own displays. Accounts are managed on the Mac with `npm run users` (see [Commands](#7-commands)) and reach the website at the next publish.
 
-## 6. Run it every day automatically (Windows Task Scheduler)
+## 6. Refresh schedule
 
-### Quick way (recommended)
+On the Mac (once):
 
-Open **PowerShell** in the project folder and run:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\windows\setup-tasks.ps1
+```bash
+./scripts/mac/setup-schedule.sh          # runs `npm run daily` at 10:00, 14:00 and 18:00
+./scripts/mac/setup-schedule.sh remove   # stop it
 ```
 
-This creates two tasks in Task Scheduler under **Display Tracker**:
+If the Mac is asleep at a scheduled time, macOS runs the job when it wakes. Logs: `logs/daily-YYYY-MM.log`.
 
-| Task | When | What |
-|---|---|---|
-| **Daily sync** | Every day at **07:00** | RMI sync → SAP sync → saves the monthly reports. If the PC was off at 07:00, it runs as soon as the PC is back on. Retries twice, 15 minutes apart. |
-| **Dashboard** | When you log in to Windows | Starts the dashboard at <http://localhost:3000> |
-
-Options: `-Time "06:30"` for another time, `-NoDashboard` to skip the dashboard task, `-RunWhetherLoggedOnOrNot` to run the sync even when you're logged off (asks for your Windows password once).
-
-### Manual way (Task Scheduler window)
-
-1. Start menu → **Task Scheduler** → **Create Task…** (not "Basic Task").
-2. **General**: Name `Display Tracker - Daily sync`. Choose "Run only when user is logged on" (or "whether logged on or not" if the PC stays on overnight).
-3. **Triggers** → New → **Daily**, start **7:00:00 AM**, recur every 1 day → OK.
-4. **Actions** → New → Program: `cmd.exe`; Arguments: `/c "C:\DisplayTracker\scripts\windows\run-daily.cmd"`; Start in: `C:\DisplayTracker` → OK.
-5. **Conditions**: tick "Wake the computer to run this task". Untick "Start only if on AC power" on laptops.
-6. **Settings**: tick "Run task as soon as possible after a scheduled start is missed" and "If the task fails, restart every 15 minutes, up to 2 times".
-7. OK. To test: right-click the task → **Run**. "Last Run Result" should be `(0x0)`; `(0x1)` means it failed — see the log.
-
-> The daily run needs the **office network or VPN** for SAP. If the VPN isn't connected at 07:00, the SAP part fails, a red banner shows on the dashboard, and the next run (or **Refresh now**) catches up automatically.
+A Windows PC can host the sync instead: `scripts/windows/setup-tasks.ps1` creates the same job in Task Scheduler.
 
 ## 7. Commands
 
-Run these in Command Prompt in the project folder.
-
 | Command | What it does |
 |---|---|
-| `npm run daily` | Everything the scheduled job does: RMI sync, SAP sync, monthly reports. Logs to `logs\daily-YYYY-MM.log`. |
-| `npm run sync:rmi` | Only the RMI part (~10 seconds). Add `-- --catalog` to also refresh RMI's product list now. |
-| `npm run sync:sap` | Only the SAP part. `-- --full` re-reads all invoices since March 2025; `-- --probe` just tests the SAP connection. |
-| `npm run build:report` | Saves every monthly report still inside its 14-month window. |
-| `npm run build:report -- --month 2026-08` | Saves one month's report (`Display_Tracker_Report_-_Aug-2026.xlsx`). Several: `--month 2026-07,2026-08`. Other folder: `--out "D:\Reports"`. |
-| `scripts\windows\start-dashboard.cmd` | Starts the dashboard at <http://localhost:3000>. |
-| `npm run sap:cert` | Shows SAP's security certificate and whether it still matches (see Troubleshooting). |
-| `npm run decisions -- export decisions.json` | Saves the design links that were decided by hand (to move them to another PC or database). `import` loads them. |
+| `npm run daily` | Everything the schedule does: RMI sync, SAP sync, reports, publish. |
+| `npm run sync:rmi` | Only RMI (~10 s). `-- --catalog` also refreshes RMI's product list. |
+| `npm run sync:sap` | Only SAP. `-- --full` re-reads all invoices since March 2025; `-- --probe` tests the connection. |
+| `npm run publish` | Copies the dashboard tables (and user accounts) to the cloud database now. |
+| `npm run build:report -- --month 2026-08` | Saves one month's report. Without `--month`: every month still inside its 14-month window. |
+| `npm run users -- list` | Lists accounts. Also: `add <email> "<Name>" admin \| zonal "<Zone>" \| rmi "<RMI name>"`, `import <file.csv>`, `reset <email>`, `set-password <email> [--show]`, `check <email>`, `disable` / `enable <email>`. Then `npm run publish`. |
+| `npm run decisions -- export decisions.json` | Saves the design links decided by hand. `import` loads them. |
+| `npm run sap:cert` | Shows SAP's certificate and whether it still matches (see Troubleshooting). |
+| `npm test` · `npm run typecheck` · `npm run lint` | Tests (including the whole pipeline on Postgres), type check, lint. |
 
 ## 8. How the numbers are calculated
 
-**Report window.** Each display gets its dealer's sales of its design from **1 month before** the display month to **12 months after** (14 months). The month headers follow the report's month (Aug-2026 report: Jul-26 … Aug-27).
+**Report window.** Each display gets its dealer's purchases of its tile from **1 month before** the display month to **12 months after** (14 months). Only months that have started are shown. **Average** = sum of the 14 months ÷ 14, as in RMI's original report.
 
-**Only months that have started are shown** (decided 24 Nov 2026). A report gains one month column each month until its window is complete, e.g. the Sep-2026 report built in Nov-2026 has Aug-26, Sep-26, Oct-26 and Nov-26; from Sep-2027 on it has all 14 months (columns V–AW, the same layout as RMI's report). The daily job rebuilds the reports, so new months appear automatically.
-
-**Average (report).** Avg Sales Volume / Value = **sum of the 14 months ÷ 14**, with months that haven't happened yet counted as 0 (same as RMI's original report). So for a report that isn't complete yet, it is the sum of the months shown ÷ 14 (confirmed 24 Nov 2026: always ÷ 14, never ÷ months shown, so averages stay comparable with RMI's reports). The dashboard also shows an average over elapsed months only.
-
-**Sales (from SAP, sales org 1801, domestic).**
+**Sales (SAP, sales org 1801, domestic tiles).** Same method as NITCO's Sales data MIS (the SAP billing register):
 
 | Invoice type | Counts as |
 |---|---|
-| ZVDT | Sale: + quantity, + value |
-| ZRTI | Return: − quantity, − value |
-| ZCBR, ZCPD | Credit note: − value only (ZCQC quality-claim notes are not counted, as in the Sales data MIS) |
-| Everything else (marble, stock transfer, samples, export, cancellations, pro forma, …) | Ignored |
+| ZVDT, ZSCR, ZMAR, S2 | Sale: + quantity, + value |
+| ZRTI, S1, S3 | Return / cancellation: − quantity, − value |
+| ZCBR, ZCPD, ZCQC | Credit note: − value only |
+| ZTDN, ZNTI, ZDMS | Not counted by default; the **More filters → Include debit notes & samples** switch adds them (and every report also comes in an `_incl_ZTDN_ZNTI_ZDMS` version) |
+| Everything else (marble, export, stock transfer, pro forma, …) | Ignored |
 
-Cancelled invoices are ignored. Month = invoice date. Value = net amount, **before GST**. Volume = **m²**, converted from boxes using each tile's conversion in SAP (e.g. 1 box of 600×1200 = 1.44 m²).
+A line is a tile when its division is 02 or its material code starts with `TI`. Cancelled documents stay in their own month and the cancellation counts on its own date. Month = invoice date. Value = net, **before GST**. Volume = **m²**, from each tile's box size in SAP.
 
-**Design → SAP material.** Each display counts sales of its design's own SAP code **plus that code's packaging variants**. When only the packaging changes, NITCO gives the tile a new code (e.g. Oyster Blue Onyx `TIGVMPL1200X600NOGL02160` → `…NOGL03021`). The app treats codes as packaging variants when they are identical except for the trailing serial number (e.g. `02160`, `03021`, `0301`) and have the same design name in SAP. A design whose only candidates are packaging variants of each other is linked automatically. Codes that differ anywhere else (e.g. `DCH` vs `DTL`, `NO` vs `MH`) are not added, and neither are name variants such as "(PO)", "(HW)" or "(RPO)". RMI only stores the design name. The app links it to a SAP material automatically when the name (and, if needed, the size) points to exactly one product; When the name and size can't decide, the app uses SAP sales: if the dealers who displayed the design bought only one of the possible codes, or only one of them still sells at all, that one is linked. Otherwise the display isn't linked and gets no sales; the **Displays** page shows "design not matched" in the last column. Displays with a blank design in RMI can't get sales.
+**Tile → SAP code.** RMI stores only the design name and size. The app links it to a SAP code when the name (and if needed the size) points to one product; when it can't decide, SAP sales settle it (the code the displaying dealers bought, or the only one still selling). Otherwise the display isn't linked and gets no sales.
 
-**Invoice types ZTDN, ZNTI, ZDMS** (debit notes, ZNTI, samples) are not counted as sales yet; sales ops has to decide. Until then every report comes in two versions: the normal file and one ending `_incl_ZTDN_ZNTI_ZDMS`. On the dashboard and the download page, **Sales counted** switches between them.
+**Same tile, new box.** A tile code ends in two digits for tiles per box plus a serial (`TIGVMPL1200X600NOGL` `02` `160`: 2 tiles a box). When NITCO changes the box, the tile gets a new code (Oyster Blue Onyx `…02160` → `…03021`). Codes count as one tile when both are tile codes with the same design name and are identical up to the trailing number; "Not to use" codes never merge. The daily sync warns if two codes with the same box size both sell, so they can be checked with sales ops.
 
-**Dealer → SAP accounts.** Many dealers have more than one SAP account (e.g. a normal account plus a Project Dealer account), and invoices go to either. A display counts sales on **all of the dealer's accounts**: SAP accounts with the **same GST number and the same PIN code** are treated as one dealer (from SAP's customer master, refreshed weekly). NITCO's own accounts (depots, Le Studio) are never linked. The Excel report's second sheet, *How sales were matched*, lists for every row which accounts and design codes were counted and how much came from the linked accounts.
+**Same dealer, several accounts.** SAP accounts with the same GST number and PIN code count as one dealer (NITCO's own depots never). The report's second sheet lists which accounts and codes were counted.
 
-**Dashboard rules.**
+**Dashboard rules.** A display = one dealer + tile + display month (repeats count once). Totals never count the same dealer × tile × month of sales twice. *Led to a purchase* = any purchase in the 12 months after the display month; displays from the current month, and displays whose tile isn't linked, are left out of rates.
 
-- *Display pair* = same dealer + same design + same display month. Two panels of one design count once in rates and averages.
-- Totals never count the same dealer × design × month of sales twice, even if it follows several displays.
-- *Led to sales* (conversion) = any sales from M+1 onwards. Displays from the current month, and displays whose design isn't linked, are left out of rates.
+## 9. Update and deploy
 
-## 9. Update to a new version
+```bash
+git pull
+npm install
+npm test && npm run typecheck && npm run lint
+npx vercel deploy --prod      # the website (Vercel project nitco2/display-tracker)
+```
 
-1. Stop the dashboard (close its window).
-2. Replace the program files with the new version (keep your `.env`, `data`, `logs` and `certs` folders), or run `git pull` if you use Git.
-3. In the project folder:
-   ```bat
-   npm install
-   npm run build
-   ```
-4. Start the dashboard again. Database changes are applied automatically on the next run.
+Database changes are applied automatically on the next run. `.vercelignore` keeps `.env`, `data/` and other private folders off Vercel.
 
-**Backup:** your data is in `data\app.db`. Everything in it can be pulled again from RMI and SAP, except the design links decided by hand (26 so far). Back those up with `npm run decisions -- export decisions-backup.json`.
+**Backup:** everything in `data/app.db` can be pulled again from RMI and SAP, except the design links decided by hand: `npm run decisions -- export decisions-backup.json`.
 
 ## 10. Troubleshooting
 
-First look at the **red banner** on the dashboard or the end of `logs\daily-YYYY-MM.log`. Common messages:
+First look at the banner on the dashboard or the end of `logs/daily-YYYY-MM.log`.
 
 | Message | Meaning and fix |
 |---|---|
-| `RMI login rejected: check RMI_USER / RMI_PASS` | Wrong RMI username/password in `.env`, or the password was changed. Update `.env`. |
-| `RMI Login: HTTP 403 "Unauthorized Company."` | `RMI_APP_KEY` is wrong, or RMI changed its key. See below. |
-| `RMI … returned an unexpected shape` / `header changed` | The RMI app was changed by its developer (SVIK). The data is safe; the app stops instead of saving wrong data. Needs a developer: the RMI connection is all in `src/adapters/rmi.ts` and `docs/rmi-api.md`. |
-| `RMI account is not an admin; it may not see all zones` | The RMI login is limited to a zone. Use an all-zones login. |
-| `EHOSTUNREACH` / `ETIMEDOUT` … `connect to the office network or VPN` | SAP isn't reachable. Connect to VPN/office network and click **Refresh now**. |
-| `SAP … HTTP 401` | Wrong SAP user/password in `.env`, or the SAP password expired. |
-| `SAP … HTTP 403` | The SAP user may not read the OData services. Ask SAP basis to grant read access to `API_BILLING_DOCUMENT_SRV` and `API_PRODUCT_SRV`. |
-| `server certificate not trusted` / `CERT_HAS_EXPIRED` | SAP's security certificate changed. Run `npm run sap:cert`, confirm the SHA-256 fingerprint with IT, then `npm run sap:cert -- --save`. |
-| `… is open in Excel (or locked). Close it and run again.` | A report file is open. Close it in Excel; the next run (or Refresh now) rewrites it. |
-| `SAP not configured yet` (amber) | `SAP_ODATA_BASE_URL` is blank in `.env`. |
-| Dashboard shows **0** sales for a display | Its design is blank in RMI or doesn't match a SAP product, or the dealer simply hasn't bought it. Purchases on the dealer's other SAP accounts are counted only when SAP has the same GST number and PIN code on both. The **Displays** page shows the SAP material (or why there is none) in the last column. |
-| `npm` says EACCES / root-owned cache (Mac) | Run once in Terminal: `sudo chown -R $(id -u):$(id -g) ~/.npm` |
+| `RMI login rejected` | Wrong `RMI_USER` / `RMI_PASS` in `.env`, or the password changed. |
+| `RMI Login: HTTP 403 "Unauthorized Company."` | `RMI_APP_KEY` is wrong, or RMI changed it. See below. |
+| `RMI … returned an unexpected shape` / `header changed` | RMI's app changed. The app stops instead of saving wrong data; the RMI connection is all in `src/adapters/rmi.ts` and `docs/rmi-api.md`. |
+| `EHOSTUNREACH` / `ETIMEDOUT` … `office network or VPN` | SAP isn't reachable. Connect to VPN and run `npm run daily`. |
+| `SAP … HTTP 401` / `403` | Wrong or expired SAP password / no read access to the OData services. |
+| `server certificate not trusted` | SAP's certificate changed. `npm run sap:cert`, confirm the fingerprint with IT, then `npm run sap:cert -- --save`. |
+| `… is open in Excel (or locked)` | Close the report file; the next run rewrites it. |
+| A display shows **₹0** | Its design is blank in RMI or not linked to SAP, or the dealer hasn't ordered it. The **Displays** page shows the status. |
+| Someone can't sign in | `npm run users -- check <email>` tests a password; `set-password` changes it; then `npm run publish`. |
 
-<a id="rmi-app-key"></a>**Finding RMI_APP_KEY.** Open <https://rmi.nitco.in> in Chrome, press F12, open the **Sources** tab, select the page `(index)`, and search (Ctrl+F) for `Authtoken`. The value in quotes after it is the key. It is the same for every RMI user.
-
-**Still stuck?** Developer documentation: `docs/rmi-api.md` (RMI), `docs/sap-api.md` (SAP), `docs/deploy.md` (moving to a server). Every sync is also recorded in the database table `sync_runs` with its error.
+<a id="rmi-app-key"></a>**Finding RMI_APP_KEY.** Open <https://rmi.nitco.in> in Chrome, press F12, **Sources** tab, page `(index)`, search for `Authtoken`. The value after it is the key (the same for every RMI user).
 
 ## 11. Where things are
 
 | Folder / file | Contents |
 |---|---|
-| `.env` | Your settings and passwords (private) |
-| `data\app.db` | The database (all synced data, the design links decided by hand) |
-| `reports\` (or `REPORT_OUTPUT_DIR`) | The monthly Excel reports |
-| `logs\` | One log file per month from the daily job |
-| `certs\sap-prd.pem` | SAP's security certificate (public, not secret) |
-| `reference\` | RMI's original Aug-2026 report, used by the automated test |
-| `docs\` | Technical documentation |
-| `src\adapters\rmi.ts`, `src\adapters\sap.ts` | The only files that talk to RMI / SAP |
+| `src/adapters/` | The only code that talks to RMI and SAP |
+| `src/sync/` | Sync jobs (RMI, SAP, design matching, publish) |
+| `src/sales/` | Sales rules: report window, dealer accounts, packaging variants, monthly sales split |
+| `src/analytics/` | Dashboard numbers (outcomes, before vs after, rankings) |
+| `src/report/` | The Excel report |
+| `src/app/`, `src/components/` | The website (Next.js) |
+| `src/db/`, `drizzle/` | Database schema and migrations (SQLite and Postgres) |
+| `scripts/` | Command-line jobs; `scripts/mac` and `scripts/windows` for the schedule |
+| `tests/` | Automated tests |
+| `docs/` | Technical documentation |
+| `assets/brand/` | The NITCO logo as supplied (the site uses the versions in `public/`) |
+| `.env`, `data/`, `logs/`, `reports/`, `reference/` | Private: settings, database, logs, reports, RMI's original report. Never committed. |

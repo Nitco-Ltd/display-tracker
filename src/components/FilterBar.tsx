@@ -6,11 +6,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { MultiSelect } from "./MultiSelect";
 import type { FilterOptions } from "@/analytics/data";
+import { monthName } from "@/lib/format";
 
-function monthLabel(ym: string) {
-  const [y, m] = ym.split("-").map(Number);
-  return `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][m - 1]} ${y}`;
-}
 
 const PRIMARY = ["month", "zone", "region", "rmi", "dealer"];
 
@@ -53,7 +50,7 @@ export function FilterBar({
   const o = (vals: string[]) => vals.map((v) => ({ value: v, label: v }));
 
   const all: [string, string, { value: string; label: string }[]][] = [
-    ["month", "Display month", options.months.map((m) => ({ value: m, label: monthLabel(m) }))],
+    ["month", "Display month", options.months.map((m) => ({ value: m, label: monthName(m) }))],
     ["zone", "Zone", o(options.zones)],
     ["region", "Region", o(options.regions)],
     ["rmi", "RMI", o(options.rmis)],

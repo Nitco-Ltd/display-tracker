@@ -1,13 +1,14 @@
 import { Suspense } from "react";
 import { FilterBar } from "@/components/FilterBar";
 import { LineChart } from "@/components/LineChart";
-import { GroupTitle, Section } from "@/components/Kpi";
+import { GroupTitle, Section } from "@/components/Section";
 import { Hero } from "@/components/Hero";
 import { Funnel } from "@/components/Funnel";
 import { StackedBarChart } from "@/components/StackedBarChart";
 import { Icon } from "@/components/Icon";
 import { filterOptions, loadRows, type SearchParams } from "@/analytics/data";
-import { ALL_OFFSETS, beforeAfter, currentMonth, isConverted, isLinked, isMeasurable, kpis, offsetLabel, uniquePairs } from "@/analytics/metrics";
+import { ALL_OFFSETS, beforeAfter, beforeVsAfter, currentMonth, kpis, offsetLabel, outcomes, outcomesByMonth, uniquePairs } from "@/analytics/metrics";
+import { paramList } from "@/lib/params";
 import { inr, inrCompact, m2, monthName, num, pct } from "@/lib/format";
 
 const MIN_N = 200; // fewer displays than this in a month-after point: drawn hollow (less reliable)
@@ -20,42 +21,14 @@ export default async function Overview({ searchParams }: { searchParams: Promise
   const ba = beforeAfter(rows, cur, ALL_OFFSETS);
   const short = (ym: string) => monthName(ym).replace(/ 20(\d\d)$/, " ’$1");
 
-  // Each dealer + tile + display month counted once.
-  const pairs = uniquePairs(rows);
-  const judged = pairs.filter((r) => isLinked(r) && isMeasurable(r, cur));
-  const bought = judged.filter((r) => isConverted(r, cur));
-  const unmatched = pairs.filter((r) => !isLinked(r)).length;
-  const tooNew = pairs.length - unmatched - judged.length;
-  const rate = judged.length ? bought.length / judged.length : NaN;
-  const perDisplay = judged.length ? k.afterValue / judged.length : NaN;
-
-  // Month before display vs. the average of the three months after.
-  const before = ba.find((p) => p.offset === -1)?.avgValue ?? NaN;
-  const after3 = ba.filter((p) => p.offset >= 1 && p.offset <= 3 && Number.isFinite(p.avgValue));
-  const afterAvg = after3.length ? after3.reduce((a, p) => a + p.avgValue, 0) / after3.length : NaN;
-  const change = Number.isFinite(before) && before > 0 && Number.isFinite(afterAvg) ? afterAvg / before - 1 : NaN;
+  const pairs = uniquePairs(rows); // each dealer + tile + display month once
+  const o = outcomes(pairs, cur);
+  const perDisplay = o.checked ? k.afterValue / o.checked : NaN;
+  const { before, after: afterAvg, change } = beforeVsAfter(ba);
   const hasBA = Number.isFinite(before) && Number.isFinite(afterAvg);
   const baMax = Math.max(1, before || 0, afterAvg || 0);
-
-  // Displays by the month they were put up, split by what happened.
-  const byMonth = new Map<string, { all: number; judged: number; bought: number }>();
-  for (const r of pairs) {
-    if (!r.cohortMonth || r.cohortMonth > cur) continue;
-    const m = byMonth.get(r.cohortMonth) ?? { all: 0, judged: 0, bought: 0 };
-    m.all++;
-    if (isLinked(r) && isMeasurable(r, cur)) {
-      m.judged++;
-      if (isConverted(r, cur)) m.bought++;
-    }
-    byMonth.set(r.cohortMonth, m);
-  }
-  const sorted = [...byMonth.entries()].sort(([a], [b]) => a.localeCompare(b));
-  // Skip the near-empty months at the start (a handful of early test entries), so the chart starts where displays did.
-  const peak = Math.max(0, ...sorted.map(([, s]) => s.all));
-  const firstReal = sorted.findIndex(([, s]) => s.all >= peak * 0.03);
-  const months = sorted.slice(Math.max(0, firstReal));
-
-  const where = [...(Array.isArray(sp.region) ? sp.region : sp.region ? [sp.region] : []), ...(Array.isArray(sp.zone) ? sp.zone : sp.zone ? [sp.zone] : [])].join(", ");
+  const months = outcomesByMonth(pairs, cur);
+  const where = [...paramList(sp.region), ...paramList(sp.zone)].join(", ");
 
   return (
     <>
@@ -65,17 +38,17 @@ export default async function Overview({ searchParams }: { searchParams: Promise
 
       <Hero
         eyebrow={`Overview · ${where || "all zones"}`}
-        title={Number.isFinite(rate) ? `${pct(rate).replace(".0%", "%")} of displays led to a purchase.` : "No displays to check for this selection yet."}
-        share={judged.length ? rate : undefined}
+        title={Number.isFinite(o.rate) ? `${pct(o.rate).replace(".0%", "%")} of displays led to a purchase.` : "No displays to check for this selection yet."}
+        share={o.checked ? o.rate : undefined}
         shareCaption="led to a purchase"
         stats={[
-          { label: "Displays", value: num(pairs.length), sub: `at ${num(k.dealers)} dealer${k.dealers === 1 ? "" : "s"}` },
-          { label: "Bought afterwards", value: num(bought.length), sub: `of ${num(judged.length)} ready to check` },
+          { label: "Displays", value: num(o.displays), sub: `at ${num(k.dealers)} dealer${k.dealers === 1 ? "" : "s"}` },
+          { label: "Bought afterwards", value: num(o.bought), sub: `of ${num(o.checked)} ready to check` },
           { label: "Sales that followed", value: inrCompact(k.afterValue), sub: "same dealer, same tile" },
           { label: "Per display", value: inr(perDisplay), sub: "on average, after display" },
         ]}
       >
-        {judged.length ? (
+        {o.checked ? (
           <>
             Dealers went on to buy <b className="text-[var(--hero-text)] font-semibold">{inrCompact(k.afterValue)}</b> of the tiles they had on display.
             {Number.isFinite(change) && (
@@ -94,26 +67,26 @@ export default async function Overview({ searchParams }: { searchParams: Promise
       <div className="grid gap-x-5 lg:grid-cols-5">
         <Section className="lg:col-span-3" title="From display to purchase" note="Each bar is part of the one above it.">
           <Funnel
-            max={pairs.length}
+            max={o.displays}
             steps={[
-              { label: "Displays recorded", value: pairs.length, display: num(pairs.length), color: "var(--neutral-mark)" },
+              { label: "Displays recorded", value: o.displays, display: num(o.displays), color: "var(--neutral-mark)" },
               {
                 label: "Ready to check",
                 hint: "tile found in SAP, up for a month or more",
-                value: judged.length,
-                display: num(judged.length),
-                share: pct(judged.length / (pairs.length || 1)),
+                value: o.checked,
+                display: num(o.checked),
+                share: pct(o.checked / (o.displays || 1)),
                 color: "var(--series-1-soft)",
               },
-              { label: "Dealer bought the tile", value: bought.length, display: num(bought.length), share: pct(rate), color: "var(--series-1)" },
+              { label: "Dealer bought the tile", value: o.bought, display: num(o.bought), share: pct(o.rate), color: "var(--series-1)" },
             ]}
           />
-          {(unmatched > 0 || tooNew > 0) && (
+          {(o.unmatched > 0 || o.tooNew > 0) && (
             <div className="mt-6 flex items-start gap-2 text-[11.5px] text-ink-3">
               <Icon name="info" size={15} className="mt-px shrink-0" />
               <span>
-                Not checked yet: {num(unmatched)} with a tile that can&apos;t be found in SAP
-                {tooNew > 0 ? `, ${num(tooNew)} put up this month` : ""}.
+                Not checked yet: {num(o.unmatched)} with a tile that can&apos;t be found in SAP
+                {o.tooNew > 0 ? `, ${num(o.tooNew)} put up this month` : ""}.
               </span>
             </div>
           )}
@@ -185,15 +158,11 @@ export default async function Overview({ searchParams }: { searchParams: Promise
             { key: "not", label: "Not bought yet", color: "var(--neutral-mark)" },
             { key: "na", label: "Not checked yet", color: "var(--neutral-faint)" },
           ]}
-          bars={months.map(([m, s]) => ({
+          bars={months.map(({ month: m, o: s }) => ({
             key: m,
             label: short(m),
-            values: [s.bought, s.judged - s.bought, s.all - s.judged],
-            tooltip: [
-              monthName(m),
-              `${num(s.all)} displays`,
-              s.judged ? `${num(s.bought)} bought · ${pct(s.bought / s.judged)} of those checked` : "Too new to check",
-            ],
+            values: [s.bought, s.checked - s.bought, s.displays - s.checked],
+            tooltip: [monthName(m), `${num(s.displays)} displays`, s.checked ? `${num(s.bought)} bought · ${pct(s.rate)} of those checked` : "Too new to check"],
           }))}
         />
       </Section>

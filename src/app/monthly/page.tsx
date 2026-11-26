@@ -1,8 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { desc, lte } from "drizzle-orm";
 import { FilterBar } from "@/components/FilterBar";
-import { GroupTitle, Section } from "@/components/Kpi";
+import { GroupTitle, Section } from "@/components/Section";
 import { Hero } from "@/components/Hero";
 import { Icon } from "@/components/Icon";
 import { SplitBar } from "@/components/SplitBar";
@@ -10,13 +9,11 @@ import { Tabs } from "@/components/Tabs";
 import { filterOptions, type SearchParams } from "@/analytics/data";
 import { currentMonth } from "@/analytics/metrics";
 import { requireViewer } from "@/auth/viewer";
-import { getDb, tables } from "@/db/client";
 import { ensureSchema } from "@/db/migrate";
-import { cached } from "@/lib/datacache";
-import { salesFunnel, type FunnelFilter } from "@/sales/funnel";
+import { salesFunnel, salesMonths as loadSalesMonths, type FunnelFilter } from "@/sales/funnel";
+import { paramList as list, toQuery } from "@/lib/params";
 import { inr, inrCompact, monthName, num, pct } from "@/lib/format";
 
-const list = (v: string | string[] | undefined) => (Array.isArray(v) ? v : v ? [v] : []).filter(Boolean);
 
 // Colours match the split bar: tiles on display = series 1, other tiles = series 2, no display = series 3; totals grey.
 const COLOR = { onDisplay: "var(--series-1)", otherTiles: "var(--series-2)", noDisplay: "var(--series-3)", total: "var(--axis)" };
@@ -68,13 +65,8 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
   const sp = await searchParams;
   await ensureSchema();
   const viewer = await requireViewer();
-  const t = tables();
   const cur = currentMonth();
-  const salesMonths = await cached(`salesMonths|${cur}`, async () =>
-    (
-      await getDb().selectDistinct({ m: t.sapCustomerMonthly.month }).from(t.sapCustomerMonthly).where(lte(t.sapCustomerMonthly.month, cur)).orderBy(desc(t.sapCustomerMonthly.month))
-    ).map((r) => r.m),
-  );
+  const salesMonths = await loadSalesMonths(cur);
   const month = list(sp.month)[0] ?? salesMonths.find((m) => m < cur) ?? cur;
   const includeExtra = list(sp.sales).includes("incl");
 
@@ -85,10 +77,8 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
   const [r, options] = await Promise.all([salesFunnel(month, f, { includeExtra }), filterOptions()]);
   const where = [...(f.regions ?? []), ...(f.regions?.length ? [] : (f.zones ?? []))].join(", ") || "all regions";
   const who = f.rmiNames?.length ? ` · ${f.rmiNames.join(", ")}'s dealers` : f.dealerCodes?.length ? " · selected dealers" : "";
-  const keep = new URLSearchParams();
-  for (const [k, v] of [["zone", f.zones], ["region", f.regions], ["rmi", f.rmiNames], ["dealer", f.dealerCodes]] as const) for (const x of v ?? []) keep.append(k, x);
   const reportHref = `/download?month=${month}`;
-  const displaysHref = `/displays?month=${month}&${keep.toString()}`;
+  const displaysHref = `/displays?${toQuery({ zone: f.zones, region: f.regions, rmi: f.rmiNames, dealer: f.dealerCodes }, { set: { month } })}`;
 
   const pctA = (v: number) => (r.total ? v / r.total : NaN);
   const noDisplay = r.total - r.displayDealers;

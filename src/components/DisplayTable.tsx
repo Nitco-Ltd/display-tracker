@@ -1,7 +1,7 @@
 // Display rows: the columns people need to act on. Every report column (A–U) is in the Excel export.
 import { currentMonth, isConverted, isLinked, isMeasurable, rowSummary } from "@/analytics/metrics";
 import type { DisplayWithSales } from "@/sales/window";
-import { inr, m2, monthName } from "@/lib/format";
+import { inr, m2 } from "@/lib/format";
 
 function Status({ r, cur }: { r: DisplayWithSales; cur: string }) {
   const [label, cls] = !isLinked(r)
@@ -63,10 +63,4 @@ export function DisplayTable({ rows, status = true }: { rows: DisplayWithSales[]
       {!rows.length && <div className="p-6 text-center text-[13.5px] text-ink-3">No displays for this selection.</div>}
     </div>
   );
-}
-
-export function cohortNote(rows: DisplayWithSales[]) {
-  const months = [...new Set(rows.map((r) => r.cohortMonth).filter(Boolean))].sort() as string[];
-  if (!months.length) return "";
-  return months.length === 1 ? monthName(months[0]) : `${monthName(months[0])} – ${monthName(months.at(-1)!)}`;
 }

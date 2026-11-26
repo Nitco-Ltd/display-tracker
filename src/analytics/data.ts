@@ -9,7 +9,9 @@ import { currentMonth } from "@/analytics/metrics";
 import type { ReportFilter } from "@/report/filters";
 import { allDisplaysWithSales, matchesFilter, type DisplayWithSales } from "@/sales/window";
 
-export type SearchParams = Record<string, string | string[] | undefined>;
+import { paramList, type SearchParams } from "@/lib/params";
+
+export type { SearchParams };
 
 const KEYS: [keyof ReportFilter, string][] = [
   ["cohortMonths", "month"],
@@ -24,13 +26,11 @@ const KEYS: [keyof ReportFilter, string][] = [
   ["designStatuses", "dstatus"],
   ["displayedWhere", "where"],
 ];
-export const FILTER_PARAM: Record<string, keyof ReportFilter> = Object.fromEntries(KEYS.map(([k, p]) => [p, k]));
 
 export function parseFilter(sp: SearchParams): ReportFilter {
   const f: ReportFilter = {};
   for (const [key, param] of KEYS) {
-    const v = sp[param];
-    const vals = (Array.isArray(v) ? v : v ? [v] : []).filter(Boolean);
+    const vals = paramList(sp[param]);
     if (vals.length) (f[key] as string[]) = vals;
   }
   return f;

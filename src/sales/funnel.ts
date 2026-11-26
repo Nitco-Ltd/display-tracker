@@ -9,10 +9,23 @@
 // Area = the customer's SAP sales district (zone) and sales office (region), named the way RMI names them
 // (EZ1 → "East Zone 1", BH1/BH2/BHC → "Bihar"; learnt from the RMI dealers in each office).
 // A dealer's linked accounts (same GST + PIN, see dealers.ts) and a design's packaging variants count as one.
-import { eq } from "drizzle-orm";
+import { desc, eq, lte } from "drizzle-orm";
 import { getDb, tables } from "@/db/client";
 import { cached } from "@/lib/datacache";
 import { allDisplaysWithSales, type DisplayWithSales } from "./window";
+
+/** Months that have SAP sales, newest first, up to `upTo` (the Monthly sales month picker). */
+export function salesMonths(upTo: string): Promise<string[]> {
+  return cached(`salesMonths|${upTo}`, async () => {
+    const t = tables();
+    const rows = await getDb()
+      .selectDistinct({ m: t.sapCustomerMonthly.month })
+      .from(t.sapCustomerMonthly)
+      .where(lte(t.sapCustomerMonthly.month, upTo))
+      .orderBy(desc(t.sapCustomerMonthly.month));
+    return rows.map((r) => r.m);
+  });
+}
 
 export interface Geo {
   zone: string;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { addMonths, monthLabel, windowMonths } from "@/sales/window";
+import { addMonths, windowMonths } from "@/sales/window";
+import { monthLabel } from "@/lib/format";
 
 describe("report window", () => {
   it("runs from 1 month before to 12 after the cohort month", () => {

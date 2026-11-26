@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { afterSalesTotal, beforeAfter, kpis, uniquePairs, zeroSales } from "@/analytics/metrics";
+import { afterSalesTotal, beforeAfter, beforeVsAfter, kpis, outcomes, outcomesByMonth, uniquePairs, zeroSales } from "@/analytics/metrics";
 import { windowMonths, reportAverages, type DisplayWithSales } from "@/sales/window";
 
 const CUR = "2026-11";
@@ -79,5 +79,30 @@ describe("linked dealer accounts in metrics", () => {
     const b = row("B", "2026-08", { "2026-09": 500 }, { dealerCode: "0011007639", dealerGroup: g });
     expect(uniquePairs([a, b])).toHaveLength(1);
     expect(afterSalesTotal([a, b], CUR).value).toBe(500);
+  });
+});
+
+describe("overview outcomes", () => {
+  const bought = row("A", "2026-06", { "2026-07": 500 });
+  const notYet = row("B", "2026-06", {}, { dealerCode: "D2" });
+  const unmatched = row("U", "2026-07", {}, { materialCode: null, mapStatus: "unmapped" });
+  const tooNew = row("N", "2026-11", {}, { dealerCode: "D3" });
+
+  it("splits displays into bought, not yet, unmatched and too new", () => {
+    expect(outcomes([bought, notYet, unmatched, tooNew], CUR)).toEqual({ displays: 4, unmatched: 1, tooNew: 1, checked: 2, bought: 1, rate: 0.5 });
+  });
+
+  it("groups by display month and drops near-empty leading months", () => {
+    const busy = Array.from({ length: 40 }, (_, i) => row(`M${i}`, "2026-06", {}, { dealerCode: `X${i}` }));
+    const early = row("E", "2025-04", {}, { dealerCode: "E1" }); // 1 display vs 40: under 3%, left out
+    const months = outcomesByMonth([early, ...busy, unmatched], CUR).map((m) => m.month);
+    expect(months).toEqual(["2026-06", "2026-07"]);
+  });
+
+  it("compares the month before with the average of the three months after", () => {
+    const pts = [-1, 1, 2, 3].map((offset, i) => ({ offset, avgValue: [100, 60, 80, 100][i] })) as Parameters<typeof beforeVsAfter>[0];
+    const r = beforeVsAfter(pts);
+    expect([r.before, r.after]).toEqual([100, 80]);
+    expect(r.change).toBeCloseTo(-0.2);
   });
 });

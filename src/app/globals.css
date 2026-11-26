@@ -22,9 +22,7 @@
   --ink-strong: #161513; /* selected state, primary button, top bar */
   --ink-strong-text: #ffffff;
   --accent: #2f6fd6; /* links, focus, data */
-  --accent-hover: #2a62bd;
   --accent-soft: #e9f0fb;
-  --accent-ink: #ffffff;
   --gold: #c9a464; /* "Display Tracker" in the top bar, like "Insights" */
   --series-1: #2f6fd6;
   --series-1-soft: #a9c3ee;
@@ -42,8 +40,6 @@
   --status-critical-text: #b3362c;
   --banner-warning-bg: #fbf3e4;
   --banner-critical-bg: #fbeceb;
-  --shadow-sm: none;
-  --shadow-md: 0 6px 20px rgba(40, 35, 25, 0.08);
   --shadow-lg: 0 14px 36px rgba(40, 35, 25, 0.14), 0 2px 6px rgba(40, 35, 25, 0.06);
   --ease: cubic-bezier(0.22, 0.8, 0.24, 1);
   /* the dark headline card */
@@ -68,7 +64,6 @@
     --ink-strong: #f1eee8;
     --ink-strong-text: #161513;
     --accent: #4a86e8;
-    --accent-hover: #6a9cee;
     --accent-soft: #1a2638;
     --series-1: #4a86e8;
     --series-1-soft: #2c4a78;
@@ -86,7 +81,6 @@
     --status-critical-text: #ee8178;
     --banner-warning-bg: #2a2212;
     --banner-critical-bg: #2c1613;
-    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
     --shadow-lg: 0 16px 44px rgba(0, 0, 0, 0.7);
     --hero-bg: radial-gradient(120% 140% at 85% 0%, #2c2b27 0%, #1b1a17 60%, #141311 100%);
   }
@@ -142,11 +136,6 @@ body {
 .serif {
   font-family: var(--font-serif);
   font-weight: 400;
-}
-.stat {
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1;
 }
 .label {
   font-size: 10.5px;
@@ -409,12 +398,6 @@ main > *:nth-child(4) { animation-delay: 0.12s; }
 main > *:nth-child(5) { animation-delay: 0.16s; }
 main > *:nth-child(6) { animation-delay: 0.2s; }
 main > *:nth-child(n + 7) { animation-delay: 0.24s; }
-.stagger > * {
-  animation: rise 0.5s var(--ease) backwards;
-}
-.stagger > *:nth-child(2) { animation-delay: 0.06s; }
-.stagger > *:nth-child(3) { animation-delay: 0.12s; }
-.stagger > *:nth-child(4) { animation-delay: 0.18s; }
 .grow-x {
   transform-origin: left center;
   animation: grow-x 0.9s var(--ease) 0.15s backwards;
@@ -439,12 +422,6 @@ main > *:nth-child(n + 7) { animation-delay: 0.24s; }
 }
 .fade-in {
   animation: fade 0.2s var(--ease) backwards;
-}
-.lift {
-  transition: border-color 0.2s var(--ease);
-}
-.lift:hover {
-  border-color: var(--border-strong);
 }
 
 @media (prefers-reduced-motion: reduce) {
