@@ -14,6 +14,7 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  // Everything except the sign-in page itself and Next.js static assets.
-  matcher: ["/((?!login|_next/static|_next/image|favicon.ico).*)"],
+  // Everything except the sign-in page itself, Next.js static assets, and the logo / tab icons (public images the
+  // sign-in page shows before anyone has signed in).
+  matcher: ["/((?!login|_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|nitco-).*)"],
 };
