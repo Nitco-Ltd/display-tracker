@@ -13,9 +13,9 @@ export default async function Login({ searchParams }: PageProps<"/login">) {
       <div className="w-full max-w-[380px]">
         <div className="flex flex-col items-center text-center mb-6">
           <div className="mb-7">
-            <NitcoLogo full height={64} />
+            <NitcoLogo full height={56} />
           </div>
-          <h1 className="text-[28px] font-bold tracking-[-0.02em]">Display Tracker</h1>
+          <h1 className="headline">Display Tracker</h1>
           <p className="text-[13.5px] text-ink-2 mt-1.5">Sign in to see how displays turn into sales.</p>
         </div>
         <LoginForm next={next} />

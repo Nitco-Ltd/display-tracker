@@ -31,7 +31,7 @@ export async function FreshnessBanner({ compact = false }: { compact?: boolean }
     const ok = !problems.length;
     return (
       <div
-        className="hidden md:flex items-center gap-2 rounded-full border border-line bg-surface-1 px-3 py-1 text-[12.5px] text-ink-2"
+        className="hidden md:flex items-center gap-2 rounded-full px-3 py-1 text-[11.5px] text-[#cfcac0]" style={{ border: "1px solid #3a3833" }}
         title={`RMI synced ${when(rmi.lastOk?.finishedAt)} · SAP synced ${when(sap.lastOk?.finishedAt)}`}
       >
         <span className="h-2 w-2 rounded-full" style={{ background: ok ? "var(--status-good)" : "var(--status-warning)" }} aria-hidden />
@@ -41,12 +41,12 @@ export async function FreshnessBanner({ compact = false }: { compact?: boolean }
   }
   if (!problems.length) return null;
   return (
-    <div className="mx-auto w-full max-w-[1280px] px-4 md:px-8 pt-4 space-y-2">
+    <div className="mx-auto w-full max-w-[1180px] px-4 md:px-8 pt-4 space-y-2">
       {problems.map((p, i) => (
         <div
           key={i}
           role="alert"
-          className="flex gap-2 items-start rounded-[14px] border px-4 py-2.5 text-[13px]"
+          className="flex gap-2 items-start rounded-[10px] border px-4 py-2.5 text-[12.5px]"
           style={{
             background: p.level === "critical" ? "var(--banner-critical-bg)" : "var(--banner-warning-bg)",
             borderColor: p.level === "critical" ? "var(--status-critical)" : "var(--status-warning)",

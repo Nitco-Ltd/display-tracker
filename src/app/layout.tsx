@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Source_Serif_4 } from "next/font/google";
 import { Suspense } from "react";
 import "./globals.css";
 import Link from "next/link";
@@ -13,6 +13,7 @@ import { loginRequired } from "@/auth/session";
 import { logout } from "./login/actions";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
+const serif = Source_Serif_4({ subsets: ["latin"], variable: "--font-serif-face", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Display Tracker · NITCO",
@@ -24,9 +25,10 @@ export const dynamic = "force-dynamic";
 function BrandMark() {
   return (
     <Link href="/" className="flex items-center gap-3 shrink-0" aria-label="NITCO Display Tracker, home">
-      <NitcoLogo height={17} />
-      <span className="h-5 w-px bg-[var(--border-strong)]" aria-hidden />
-      <span className="font-semibold text-[15px] tracking-[-0.01em]">Display Tracker</span>
+      <NitcoLogo height={15} tone="white" />
+      <span className="serif text-[16px] leading-none" style={{ color: "var(--gold)" }}>
+        Display Tracker
+      </span>
     </Link>
   );
 }
@@ -43,10 +45,10 @@ function initials(name: string) {
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const viewer = await getViewer();
   return (
-    <html lang="en-IN" className={`${inter.variable} h-full antialiased`}>
+    <html lang="en-IN" className={`${inter.variable} ${serif.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
-        <header className="sticky top-0 z-30 border-b border-line bg-[color-mix(in_srgb,var(--surface-0)_78%,transparent)] backdrop-blur-xl backdrop-saturate-150">
-          <div className="mx-auto max-w-[1280px] px-4 md:px-8 h-auto min-h-[56px] py-2 flex flex-wrap items-center gap-x-6 gap-y-2">
+        <header className="sticky top-0 z-30 text-[#e9e6df]" style={{ background: "#161513", borderBottom: "1px solid #2a2925" }}>
+          <div className="mx-auto max-w-[1180px] px-4 md:px-8 h-auto min-h-[52px] py-2 flex flex-wrap items-center gap-x-8 gap-y-1">
             <BrandMark />
             {viewer && (
               <>
@@ -58,13 +60,13 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                   {canAdminister(viewer) && !isReadOnly() && <RefreshButton />}
                   {loginRequired() && (
                     <details className="relative">
-                      <summary className="list-none cursor-pointer flex items-center gap-2 rounded-full pl-1 pr-2.5 py-1 hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
-                        <span className="h-7 w-7 rounded-full text-white text-[11.5px] font-semibold flex items-center justify-center" style={{ background: "linear-gradient(180deg, #8e8e93, #636366)" }}>
+                      <summary className="list-none cursor-pointer flex items-center gap-2 rounded-full pl-1 pr-2.5 py-1 hover:bg-white/10 [&::-webkit-details-marker]:hidden">
+                        <span className="h-6 w-6 rounded-full text-[10.5px] font-semibold flex items-center justify-center" style={{ background: "#3a3833", color: "#e9e6df" }}>
                           {initials(viewer.name)}
                         </span>
-                        <span className="hidden sm:inline text-[13px] text-ink-2">{viewer.name.split(" ")[0]}</span>
+                        <span className="hidden sm:inline text-[12px] text-[#a39e93]">{viewer.name.split(" ")[0]}</span>
                       </summary>
-                      <div className="fade-in absolute right-0 mt-2 w-[240px] card p-2 z-40" style={{ boxShadow: "var(--shadow-lg)", borderRadius: 14 }}>
+                      <div className="fade-in absolute right-0 mt-2 w-[240px] card p-2 z-40 text-ink" style={{ boxShadow: "var(--shadow-lg)" }}>
                         <div className="px-2 py-1.5">
                           <div className="text-[13px] font-medium">{viewer.name}</div>
                           <div className="text-[12px] text-ink-3 truncate">{viewer.id}</div>
@@ -84,8 +86,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           </div>
         </header>
         {viewer && <FreshnessBanner />}
-        <main className="mx-auto w-full max-w-[1280px] px-4 md:px-8 py-8 flex-1">{children}</main>
-        <footer className="mx-auto w-full max-w-[1280px] px-4 md:px-8 pb-8 pt-2 text-[12px] text-ink-3">
+        <main className="mx-auto w-full max-w-[1180px] px-4 md:px-8 py-7 flex-1">{children}</main>
+        <footer className="mx-auto w-full max-w-[1180px] px-4 md:px-8 pb-8 pt-2 text-[11.5px] text-ink-3">
           Displays from the RMI app. Sales from SAP. Updated at 10:00, 14:00 and 18:00.
         </footer>
       </body>

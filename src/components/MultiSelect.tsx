@@ -55,7 +55,7 @@ export function MultiSelect({
           setOpen((o) => !o);
         }}
         className="field" data-active={selected.length > 0 || open} aria-expanded={open}>
-        <span className="block text-[11px] font-medium text-ink-3 leading-none mb-1">{label}</span>
+        <span className="block text-[9.5px] font-semibold uppercase tracking-[0.1em] text-ink-3 leading-none mb-1">{label}</span>
         <span className={`block truncate ${selected.length ? "text-ink font-medium" : "text-ink-2"}`}>{summary}</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-3 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden>
           <path d="m6 9 6 6 6-6" />

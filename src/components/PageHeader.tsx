@@ -1,4 +1,5 @@
-// Page title: a small grey label (the page), a large statement headline, and at most one short line under it.
+// Page title as on NITCO Insights: a small uppercase trail ("Display Tracker / Rankings"), a serif headline, and at
+// most one short line under it.
 export function PageHeader({
   eyebrow,
   title,
@@ -11,11 +12,11 @@ export function PageHeader({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-end gap-4 mb-6 mt-2">
+    <div className="flex flex-wrap items-end gap-4 mb-5 mt-1">
       <div className="flex-1 min-w-[280px]">
-        {eyebrow && <div className="eyebrow mb-2">{eyebrow}</div>}
+        {eyebrow && <div className="eyebrow mb-2">Display Tracker / {eyebrow}</div>}
         <h1 className="headline">{title}</h1>
-        {description && <p className="text-[17px] text-ink-2 mt-3 max-w-[760px] leading-snug">{description}</p>}
+        {description && <p className="text-[12.5px] text-ink-2 mt-2 max-w-[720px] leading-relaxed">{description}</p>}
       </div>
       {children && <div className="flex gap-2">{children}</div>}
     </div>
@@ -24,9 +25,5 @@ export function PageHeader({
 
 /** A highlighted one-sentence takeaway. */
 export function Insight({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mb-5 rounded-[20px] px-5 py-4 text-[15px] leading-relaxed" style={{ background: "var(--accent-soft)" }}>
-      {children}
-    </div>
-  );
+  return <div className="card mb-5 px-4 py-3 text-[13px] leading-relaxed">{children}</div>;
 }

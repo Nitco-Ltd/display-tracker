@@ -1,85 +1,94 @@
 @import "tailwindcss";
 
 /* ───────────────────────────────────────────────────────────────────────────────────────────
-   Display Tracker design system.
-   Modelled on Apple's product and HIG pages: a soft grey canvas, white rounded cards with no
-   borders and soft shadows, the system font (SF Pro on Apple devices, Inter elsewhere), one blue
-   for interaction and the main series, and calm motion that respects "reduce motion".
-   Chart colours: blue / orange / green, checked with the dataviz validator against both surfaces
-   (colour-blind separation, contrast). NITCO red is used only for the logo mark.
+   Display Tracker design system: follows NITCO Insights (insights.nitco.in), so the org's apps
+   look like one family. A black top bar; a warm off-white page; flat cream cards with thin warm
+   borders and no shadows; serif headlines (Source Serif 4), small uppercase labels, compact Inter
+   body text; black for the selected state and the main button; blue for data.
+   Chart colours (blue / orange / green) are checked with the dataviz validator against both
+   surfaces (colour-blind separation, contrast).
    ─────────────────────────────────────────────────────────────────────────────────────────── */
 :root {
   color-scheme: light;
-  --surface-0: #f5f5f7; /* page */
-  --surface-1: #ffffff; /* cards */
-  --surface-2: #f5f5f7; /* wells, table heads */
-  --surface-3: #e8e8ed; /* tracks, pressed */
-  --border: #e5e5ea;
-  --border-strong: #d2d2d7;
-  --text-primary: #1d1d1f;
-  --text-secondary: #6e6e73;
-  --text-muted: #86868b;
-  --accent: #0071e3;
-  --accent-hover: #0077ed;
-  --accent-soft: #e8f1fc;
+  --surface-0: #f4f2ed; /* page */
+  --surface-1: #fdfcf9; /* cards */
+  --surface-2: #f6f4ef; /* wells, hover */
+  --surface-3: #ebe8e1; /* tracks, inactive controls */
+  --border: #e6e2d9;
+  --border-strong: #d6d1c5;
+  --text-primary: #1b1a17;
+  --text-secondary: #5f5b53;
+  --text-muted: #8f8a7f;
+  --ink-strong: #161513; /* selected state, primary button, top bar */
+  --ink-strong-text: #ffffff;
+  --accent: #2f6fd6; /* links, focus, data */
+  --accent-hover: #2a62bd;
+  --accent-soft: #e9f0fb;
   --accent-ink: #ffffff;
-  --brand: #d71920; /* NITCO red: logo mark only */
-  --series-1: #0071e3; /* tiles on display / bought */
-  --series-1-soft: #9cc5f3;
+  --gold: #c9a464; /* "Display Tracker" in the top bar, like "Insights" */
+  --series-1: #2f6fd6;
+  --series-1-soft: #a9c3ee;
   --series-2: #e8692e;
   --series-3: #1a9e6b;
-  --neutral-mark: #c7c7cc; /* "not yet" */
-  --neutral-faint: #e1e1e6; /* "not checked yet" */
-  --gridline: #f0f0f2;
-  --axis: #d2d2d7;
-  --status-good: #34c759;
-  --status-good-text: #248a3d;
-  --status-warning: #ff9f0a;
-  --status-warning-text: #b25000;
-  --status-critical: #ff3b30;
-  --banner-warning-bg: #fff8eb;
-  --banner-critical-bg: #fff1f0;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+  --neutral-mark: #cdc8bd; /* "not yet" */
+  --neutral-faint: #e9e6de; /* "not checked yet" */
+  --gridline: #eeebe4;
+  --axis: #d6d1c5;
+  --status-good: #1a9e6b;
+  --status-good-text: #17794f;
+  --status-warning: #e0952a;
+  --status-warning-text: #a8601a;
+  --status-critical: #d6453a;
+  --status-critical-text: #b3362c;
+  --banner-warning-bg: #fbf3e4;
+  --banner-critical-bg: #fbeceb;
+  --shadow-sm: none;
+  --shadow-md: 0 6px 20px rgba(40, 35, 25, 0.08);
+  --shadow-lg: 0 14px 36px rgba(40, 35, 25, 0.14), 0 2px 6px rgba(40, 35, 25, 0.06);
   --ease: cubic-bezier(0.22, 0.8, 0.24, 1);
+  /* the dark headline card */
+  --hero-bg: radial-gradient(120% 140% at 85% 0%, #2a2925 0%, #161513 55%, #0f0e0d 100%);
+  --hero-text: #f3f1ec;
+  --hero-muted: #a39e93;
+  --hero-line: rgba(255, 255, 255, 0.1);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --surface-0: #000000;
-    --surface-1: #1c1c1e;
-    --surface-2: #2c2c2e;
-    --surface-3: #3a3a3c;
-    --border: #2c2c2e;
-    --border-strong: #3a3a3c;
-    --text-primary: #f5f5f7;
-    --text-secondary: #a1a1a6;
-    --text-muted: #8e8e93;
-    --accent: #0a84ff;
-    --accent-hover: #409cff;
-    --accent-soft: #0a2540;
-    --accent-ink: #ffffff;
-    --brand: #e5383f;
-    --series-1: #0a84ff;
-    --series-1-soft: #1f4f86;
+    --surface-0: #12110f;
+    --surface-1: #1b1a17;
+    --surface-2: #23221e;
+    --surface-3: #2e2c28;
+    --border: #2e2c28;
+    --border-strong: #3c3a34;
+    --text-primary: #f1eee8;
+    --text-secondary: #b3ada2;
+    --text-muted: #8a857b;
+    --ink-strong: #f1eee8;
+    --ink-strong-text: #161513;
+    --accent: #4a86e8;
+    --accent-hover: #6a9cee;
+    --accent-soft: #1a2638;
+    --series-1: #4a86e8;
+    --series-1-soft: #2c4a78;
     --series-2: #e0652c;
     --series-3: #1f9e6f;
-    --neutral-mark: #636366;
-    --neutral-faint: #3a3a3c;
-    --gridline: #2a2a2c;
-    --axis: #48484a;
-    --status-good: #30d158;
-    --status-good-text: #30d158;
-    --status-warning: #ffd60a;
-    --status-warning-text: #ffd60a;
-    --status-critical: #ff453a;
-    --banner-warning-bg: #2b2205;
-    --banner-critical-bg: #2c1210;
-    --shadow-sm: none;
+    --neutral-mark: #5c5850;
+    --neutral-faint: #34322d;
+    --gridline: #26241f;
+    --axis: #45423b;
+    --status-good: #2fb57f;
+    --status-good-text: #4cc892;
+    --status-warning: #e6a43e;
+    --status-warning-text: #eab35c;
+    --status-critical: #e5675d;
+    --status-critical-text: #ee8178;
+    --banner-warning-bg: #2a2212;
+    --banner-critical-bg: #2c1613;
     --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
-    --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.7);
+    --shadow-lg: 0 16px 44px rgba(0, 0, 0, 0.7);
+    --hero-bg: radial-gradient(120% 140% at 85% 0%, #2c2b27 0%, #1b1a17 60%, #141311 100%);
   }
 }
 
@@ -92,15 +101,16 @@
   --color-ink-2: var(--text-secondary);
   --color-ink-3: var(--text-muted);
   --color-accent: var(--accent);
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-inter), "Segoe UI", system-ui, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: var(--font-inter), "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: var(--font-serif-face), Georgia, "Times New Roman", serif;
 }
 
 body {
   background: var(--surface-0);
   color: var(--text-primary);
   font-family: var(--font-sans);
+  font-size: 13.5px;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.003em;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -109,41 +119,53 @@ body {
 }
 
 :focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 /* ── Type ─────────────────────────────────────────────────────────────────────────────── */
 .eyebrow {
-  font-size: 13px;
+  font-size: 10.5px;
   font-weight: 600;
-  color: var(--text-secondary);
-  letter-spacing: 0;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 .headline {
-  font-size: clamp(28px, 3.4vw, 40px);
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  line-height: 1.08;
+  font-family: var(--font-serif);
+  font-size: clamp(26px, 2.6vw, 34px);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+.serif {
+  font-family: var(--font-serif);
+  font-weight: 400;
 }
 .stat {
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   line-height: 1;
+}
+.label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
 /* ── Surfaces ─────────────────────────────────────────────────────────────────────────── */
 .card {
   background: var(--surface-1);
-  border: 1px solid transparent;
-  border-radius: 20px;
-  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  border-radius: 10px;
 }
-@media (prefers-color-scheme: dark) {
-  .card {
-    border-color: var(--border);
-  }
+.hero {
+  background: var(--hero-bg);
+  color: var(--hero-text);
+  border-radius: 12px;
 }
 
 /* ── Buttons ──────────────────────────────────────────────────────────────────────────── */
@@ -152,119 +174,155 @@ body {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 36px;
-  padding: 0 16px;
+  height: 32px;
+  padding: 0 14px;
   border-radius: 999px;
-  font-size: 14px;
+  font-size: 12.5px;
   font-weight: 500;
   white-space: nowrap;
-  border: 1px solid transparent;
-  background: var(--surface-3);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-1);
   color: var(--text-primary);
-  transition: background 0.2s var(--ease), transform 0.2s var(--ease);
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
 }
 .btn:hover {
-  background: color-mix(in srgb, var(--surface-3) 80%, var(--text-primary) 8%);
+  background: var(--surface-2);
+  border-color: var(--text-muted);
 }
 .btn:active {
-  transform: scale(0.97);
+  transform: scale(0.98);
 }
 .btn:disabled {
   opacity: 0.5;
   cursor: default;
 }
 .btn-primary {
-  background: var(--accent);
-  color: var(--accent-ink);
+  background: var(--ink-strong);
+  border-color: var(--ink-strong);
+  color: var(--ink-strong-text);
 }
 .btn-primary:hover {
-  background: var(--accent-hover);
+  background: color-mix(in srgb, var(--ink-strong) 85%, var(--surface-1));
+  border-color: transparent;
 }
 .btn-ghost {
+  border-color: transparent;
   background: transparent;
-  color: var(--accent);
+  color: var(--text-secondary);
 }
 .btn-ghost:hover {
-  background: var(--accent-soft);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border-color: transparent;
 }
 
-/* ── Segmented control (switches, tabs) ───────────────────────────────────────────────── */
+/* ── Segmented control (switches, tabs): pills, the chosen one black ─────────────────── */
 .seg {
   display: inline-flex;
-  padding: 2px;
-  gap: 2px;
-  border-radius: 10px;
-  background: var(--surface-3);
+  padding: 0;
+  gap: 4px;
+  flex-wrap: nowrap;
 }
 .seg > button,
 .seg > a {
-  height: 30px;
-  padding: 0 14px;
-  border-radius: 8px;
-  font-size: 13px;
+  height: 26px;
+  padding: 0 11px;
+  border-radius: 999px;
+  font-size: 12px;
   font-weight: 500;
-  color: var(--text-primary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  background: var(--surface-1);
   display: inline-flex;
   align-items: center;
   white-space: nowrap;
-  transition: background 0.2s var(--ease), box-shadow 0.2s var(--ease);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .seg > button:hover,
 .seg > a:hover {
-  background: color-mix(in srgb, var(--surface-1) 50%, transparent);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
 }
 .seg > [aria-pressed="true"],
 .seg > [aria-selected="true"],
 .seg > [data-active="true"] {
-  background: var(--surface-1);
-  font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
-}
-@media (prefers-color-scheme: dark) {
-  .seg > [aria-pressed="true"],
-  .seg > [aria-selected="true"],
-  .seg > [data-active="true"] {
-    background: #636366;
-  }
+  background: var(--ink-strong);
+  border-color: var(--ink-strong);
+  color: var(--ink-strong-text);
 }
 
-/* ── Chips ────────────────────────────────────────────────────────────────────────────── */
+/* ── Chips (active filters) ───────────────────────────────────────────────────────────── */
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 28px;
-  padding: 0 12px;
+  height: 24px;
+  padding: 0 10px;
   border-radius: 999px;
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 500;
-  background: var(--accent-soft);
-  color: var(--accent);
-  transition: background 0.2s var(--ease);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
 }
 .chip:hover {
-  background: color-mix(in srgb, var(--accent-soft) 70%, var(--accent) 15%);
+  border-color: var(--text-muted);
+}
+
+/* ── Status pills ("At risk", "On pace") ──────────────────────────────────────────────── */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pill::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+}
+.pill-good {
+  color: var(--status-good-text);
+  background: color-mix(in srgb, var(--status-good) 13%, transparent);
+}
+.pill-bad {
+  color: var(--status-critical-text);
+  background: color-mix(in srgb, var(--status-critical) 12%, transparent);
+}
+.pill-warn {
+  color: var(--status-warning-text);
+  background: color-mix(in srgb, var(--status-warning) 15%, transparent);
+}
+.pill-muted {
+  color: var(--text-secondary);
+  background: var(--surface-3);
 }
 
 /* ── Form field (filters) ─────────────────────────────────────────────────────────────── */
 .field {
   width: 100%;
   text-align: left;
-  border-radius: 12px;
-  border: 1px solid transparent;
-  background: var(--surface-2);
-  padding: 7px 30px 7px 12px;
-  font-size: 13.5px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  padding: 6px 28px 6px 10px;
+  font-size: 12.5px;
   position: relative;
-  transition: background 0.2s var(--ease), border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 .field:hover {
-  background: var(--surface-3);
+  border-color: var(--border-strong);
 }
 .field[data-active="true"] {
-  background: var(--surface-1);
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  border-color: var(--ink-strong);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ink-strong) 8%, transparent);
 }
 
 /* ── Tables ───────────────────────────────────────────────────────────────────────────── */
@@ -272,15 +330,17 @@ table.data {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 13.5px;
+  font-size: 12.5px;
 }
 table.data th {
   text-align: left;
   font-weight: 600;
-  font-size: 12px;
-  color: var(--text-secondary);
+  font-size: 10px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
   border-bottom: 1px solid var(--border);
-  padding: 10px 12px;
+  padding: 9px 10px;
   white-space: nowrap;
   position: sticky;
   top: 0;
@@ -289,7 +349,7 @@ table.data th {
 }
 table.data td {
   border-bottom: 1px solid var(--gridline);
-  padding: 11px 12px;
+  padding: 9px 10px;
   white-space: nowrap;
 }
 table.data tbody tr:last-child td {
@@ -307,12 +367,12 @@ table.data tbody tr:hover td {
 }
 
 /* ── Motion ───────────────────────────────────────────────────────────────────────────────
-   Page sections rise in one after another; bars grow from their baseline. Nothing loops,
-   nothing bounces, and all of it is switched off for people who ask for reduced motion. */
+   Page sections rise in one after another; bars grow from their baseline; the ring fills.
+   Nothing loops, nothing bounces, and all of it is off for people who ask for reduced motion. */
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -334,8 +394,14 @@ table.data tbody tr:hover td {
     opacity: 0;
   }
 }
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+/* "backwards", not "both": once an animation ends it leaves no layer behind that could cover a dropdown */
 main > * {
-  animation: rise 0.55s var(--ease) backwards; /* backwards, not both: once done, no leftover layer that would cover dropdowns */
+  animation: rise 0.5s var(--ease) backwards;
 }
 main > *:nth-child(2) { animation-delay: 0.04s; }
 main > *:nth-child(3) { animation-delay: 0.08s; }
@@ -344,39 +410,41 @@ main > *:nth-child(5) { animation-delay: 0.16s; }
 main > *:nth-child(6) { animation-delay: 0.2s; }
 main > *:nth-child(n + 7) { animation-delay: 0.24s; }
 .stagger > * {
-  animation: rise 0.55s var(--ease) backwards; /* backwards, not both: once done, no leftover layer that would cover dropdowns */
+  animation: rise 0.5s var(--ease) backwards;
 }
 .stagger > *:nth-child(2) { animation-delay: 0.06s; }
 .stagger > *:nth-child(3) { animation-delay: 0.12s; }
 .stagger > *:nth-child(4) { animation-delay: 0.18s; }
 .grow-x {
   transform-origin: left center;
-  animation: grow-x 0.9s var(--ease) 0.15s both;
+  animation: grow-x 0.9s var(--ease) 0.15s backwards;
 }
 .grow-y {
   transform-box: fill-box;
   transform-origin: center bottom;
-  animation: grow-y 0.8s var(--ease) both;
-}
-@keyframes draw {
-  from {
-    stroke-dashoffset: 1;
-  }
+  animation: grow-y 0.8s var(--ease) backwards;
 }
 .draw {
   stroke-dasharray: 1;
   stroke-dashoffset: 0;
-  animation: draw 1.2s var(--ease) 0.1s both;
+  animation: draw 1.2s var(--ease) 0.1s backwards;
+}
+@keyframes ring-fill {
+  from {
+    stroke-dasharray: 0 1;
+  }
+}
+.ring {
+  animation: ring-fill 1.3s var(--ease) 0.25s backwards;
 }
 .fade-in {
-  animation: fade 0.25s var(--ease) both;
+  animation: fade 0.2s var(--ease) backwards;
 }
 .lift {
-  transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
+  transition: border-color 0.2s var(--ease);
 }
 .lift:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -2,9 +2,9 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { desc, lte } from "drizzle-orm";
 import { FilterBar } from "@/components/FilterBar";
-import { Kpi, KpiRow, Section } from "@/components/Kpi";
+import { GroupTitle, Section } from "@/components/Kpi";
+import { Hero } from "@/components/Hero";
 import { Icon } from "@/components/Icon";
-import { PageHeader } from "@/components/PageHeader";
 import { SplitBar } from "@/components/SplitBar";
 import { Tabs } from "@/components/Tabs";
 import { filterOptions, type SearchParams } from "@/analytics/data";
@@ -48,15 +48,15 @@ function TreeRow({
         <div className="flex items-start gap-2" style={{ paddingLeft: `${level * 20}px` }}>
           {level > 0 && <span className="text-ink-3 font-normal" aria-hidden>{last ? "└" : "├"}</span>}
           <div>
-            <div className="text-[14px]">{label}</div>
-            {help && <div className="text-[12.5px] text-ink-3 font-normal">{help}</div>}
+            <div className="text-[13px]">{label}</div>
+            {help && <div className="text-[11.5px] text-ink-3 font-normal">{help}</div>}
           </div>
         </div>
       </td>
-      <td className="num text-[15px] whitespace-nowrap">{inr(value)}</td>
+      <td className="num text-[13px] whitespace-nowrap">{inr(value)}</td>
       <td className="num whitespace-nowrap">{pct(total ? value / total : NaN)}</td>
       <td className="hidden md:table-cell w-[30%] min-w-[90px]">
-        <div className="h-2 rounded-full bg-surface-2 overflow-hidden" aria-hidden>
+        <div className="h-[5px] rounded-full bg-[var(--surface-3)] overflow-hidden" aria-hidden>
           <div className="grow-x h-full rounded-full" style={{ width: `${Math.min(100, share * 100)}%`, background: color }} />
         </div>
       </td>
@@ -102,7 +102,6 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
             <th>Zone · Region</th>
             <th className="num">All sales</th>
             <th className="num">No display</th>
-            <th className="num">With a display</th>
             <th className="num">Other tiles</th>
             <th className="num">Tiles on display</th>
             <th className="num">% on display</th>
@@ -118,7 +117,6 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
               </td>
               <td className="num">{inr(x.total)}</td>
               <td className="num">{inr(x.total - x.displayDealers)}</td>
-              <td className="num">{inr(x.displayDealers)}</td>
               <td className="num">{inr(x.displayDealers - x.displayedDesigns)}</td>
               <td className="num">{inr(x.displayedDesigns)}</td>
               <td className="num">{pct(x.total ? x.displayedDesigns / x.total : NaN)}</td>
@@ -128,7 +126,7 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
           ))}
           {!r.byRegion.length && (
             <tr>
-              <td colSpan={9} className="text-ink-3">
+              <td colSpan={8} className="text-ink-3">
                 No sales for this selection.
               </td>
             </tr>
@@ -173,22 +171,6 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
 
   return (
     <>
-      <PageHeader
-        eyebrow={`Monthly sales · ${where}${who}`}
-        title={
-          <>
-            {inrCompact(r.total)} of tiles sold in {monthName(month)}
-            {month === cur ? <span className="text-ink-3"> so far</span> : null}
-          </>
-        }
-        description={
-          r.total ? (
-            <>
-              <b className="font-semibold text-ink">{pct(pctA(r.displayedDesigns))}</b> was dealers buying a tile on display in their own shop.
-            </>
-          ) : undefined
-        }
-      />
       <Suspense>
         <FilterBar
           options={{ ...options, months: salesMonths }}
@@ -198,17 +180,29 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
         />
       </Suspense>
 
-      <KpiRow>
-        <Kpi icon="rupee" label="All sales" value={inrCompact(r.total)} sub={includeExtra ? "incl. debit notes & samples" : "all tiles, all dealers"} />
-        <Kpi icon="store" label="Dealers with a display" value={inrCompact(r.displayDealers)} sub={`${pct(pctA(r.displayDealers))} of sales · ${num(r.displayDealerCount)} dealers`} />
-        <Kpi icon="displays" label="Tiles on display" value={inrCompact(r.displayedDesigns)} sub={`${pct(pctA(r.displayedDesigns))} of sales`} tone="green" />
-        <Kpi icon="sparkle" label="New displays" value={num(r.monthDisplays)} sub={`at ${num(r.monthDealerCount)} dealer${r.monthDealerCount === 1 ? "" : "s"}`} tone="orange" />
-      </KpiRow>
-
-      <Section
-        title="Where the sales came from"
-        note={<>“On display” means the RMI recorded that tile at that dealer in {monthName(month)} or earlier.</>}
+      <Hero
+        eyebrow={`Monthly sales · ${monthName(month)} · ${where}${who}`}
+        badge={month === cur ? <span className="pill pill-warn">Month in progress</span> : undefined}
+        title={`${inrCompact(r.total)} of tiles sold in ${monthName(month)}${month === cur ? " so far" : ""}.`}
+        share={r.total ? r.displayedDesigns / r.total : undefined}
+        shareCaption="of it was a tile on display"
+        stats={[
+          { label: "All sales", value: inrCompact(r.total), sub: includeExtra ? "incl. debit notes & samples" : "all tiles, all dealers" },
+          { label: "Dealers with a display", value: inrCompact(r.displayDealers), sub: `${pct(pctA(r.displayDealers))} of sales · ${num(r.displayDealerCount)} dealers` },
+          { label: "Tiles on display", value: inrCompact(r.displayedDesigns), sub: `${pct(pctA(r.displayedDesigns))} of sales` },
+          { label: "New displays", value: num(r.monthDisplays), sub: `at ${num(r.monthDealerCount)} dealer${r.monthDealerCount === 1 ? "" : "s"}` },
+        ]}
       >
+        {r.total ? (
+          <>
+            <b className="text-[var(--hero-text)] font-semibold">{inrCompact(r.displayedDesigns)}</b> of it was dealers buying a tile that is on display in
+            their own shop.
+          </>
+        ) : null}
+      </Hero>
+
+      <GroupTitle title="Where the sales came from" note={`“On display” means the RMI recorded that tile at that dealer in ${monthName(month)} or earlier`} />
+      <Section title="All sales, split three ways">
         <SplitBar
           ariaLabel="All sales split into tiles on display, other tiles, and dealers without a display"
           total={r.total}
@@ -265,11 +259,11 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
           </table>
         </div>
 
-        <div className="mt-6 flex flex-wrap items-center gap-3 rounded-[16px] bg-surface-2 px-4 py-3.5">
+        <div className="mt-5 flex flex-wrap items-center gap-3 rounded-[8px] border border-line bg-surface-2 px-4 py-3">
           <span className="h-8 w-8 rounded-[10px] flex items-center justify-center shrink-0" style={{ color: "var(--series-2)", background: "color-mix(in srgb, var(--series-2) 12%, transparent)" }}>
             <Icon name="sparkle" size={17} />
           </span>
-          <div className="flex-1 min-w-[240px] text-[13.5px]">
+          <div className="flex-1 min-w-[240px] text-[12.5px]">
             <b>New this month:</b> {num(r.monthDisplays)} display{r.monthDisplays === 1 ? "" : "s"} at {num(r.monthDealerCount)} dealer
             {r.monthDealerCount === 1 ? "" : "s"}, who bought <b>{inr(r.monthDesigns)}</b> of those tiles.
           </div>
@@ -283,7 +277,8 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
         </div>
       </Section>
 
-      <Section title="Details">
+      <GroupTitle title="Details" />
+      <Section title="By region and by tile">
         <Tabs
           tabs={[
             { id: "regions", label: "By region" },

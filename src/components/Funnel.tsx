@@ -17,15 +17,15 @@ export function Funnel({ steps, max }: { steps: FunnelStep[]; max?: number }) {
         <div key={s.label}>
           <div className="flex items-baseline justify-between gap-3 mb-2">
             <div className="min-w-0">
-              <span className="text-[14px] font-medium">{s.label}</span>
-              {s.hint && <span className="text-[12.5px] text-ink-3 ml-2">{s.hint}</span>}
+              <span className="text-[13px] font-medium">{s.label}</span>
+              {s.hint && <span className="text-[11.5px] text-ink-3 ml-2">{s.hint}</span>}
             </div>
-            <div className="shrink-0 text-[15px] font-semibold">
+            <div className="shrink-0 text-[13.5px] font-semibold">
               {s.display}
-              {s.share && <span className="ml-2 text-[13px] font-medium text-ink-3">{s.share}</span>}
+              {s.share && <span className="ml-2 text-[11.5px] font-medium text-ink-3">{s.share}</span>}
             </div>
           </div>
-          <div className="h-3 rounded-full bg-[var(--surface-2)] overflow-hidden" aria-hidden>
+          <div className="h-2 rounded-full bg-[var(--surface-3)] overflow-hidden" aria-hidden>
             <div
               className="grow-x h-full rounded-full"
               style={{ width: `${Math.max(0.6, Math.min(100, (s.value / top) * 100))}%`, background: s.color, animationDelay: `${0.15 + i * 0.12}s` }}

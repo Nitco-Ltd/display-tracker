@@ -4,21 +4,14 @@ import type { DisplayWithSales } from "@/sales/window";
 import { inr, m2, monthName } from "@/lib/format";
 
 function Status({ r, cur }: { r: DisplayWithSales; cur: string }) {
-  const [label, color] = !isLinked(r)
-    ? ["Tile not in SAP", "var(--text-muted)"]
+  const [label, cls] = !isLinked(r)
+    ? ["Tile not in SAP", "pill-muted"]
     : !isMeasurable(r, cur)
-      ? ["Too new", "var(--text-muted)"]
+      ? ["Too new", "pill-muted"]
       : isConverted(r, cur)
-        ? ["Bought", "var(--status-good-text)"]
-        : ["Not yet", "var(--status-warning-text)"];
-  return (
-    <span
-      className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-semibold"
-      style={{ color, background: `color-mix(in srgb, ${color} 12%, transparent)` }}
-    >
-      {label}
-    </span>
-  );
+        ? ["Bought", "pill-good"]
+        : ["Not yet", "pill-bad"];
+  return <span className={`pill ${cls}`}>{label}</span>;
 }
 
 export function DisplayTable({ rows, status = true }: { rows: DisplayWithSales[]; status?: boolean }) {
@@ -34,8 +27,8 @@ export function DisplayTable({ rows, status = true }: { rows: DisplayWithSales[]
             <th>RMI</th>
             <th>Region</th>
             {status && <th>Status</th>}
-            <th className="num">Month before</th>
-            <th className="num">After display</th>
+            <th className="num">Before</th>
+            <th className="num">After</th>
           </tr>
         </thead>
         <tbody>
@@ -44,15 +37,15 @@ export function DisplayTable({ rows, status = true }: { rows: DisplayWithSales[]
             return (
               <tr key={r.refNo}>
                 <td className="text-ink-2">{r.displayDateRaw}</td>
-                <td className="max-w-[230px] truncate font-medium" title={r.dealerName ?? ""}>
+                <td className="max-w-[200px] truncate font-medium" title={r.dealerName ?? ""}>
                   {r.dealerName}
                 </td>
-                <td className="max-w-[210px] truncate" title={`${r.designName ?? ""} · ${r.sizeMm ?? ""}`}>
+                <td className="max-w-[180px] truncate" title={`${r.designName ?? ""} · ${r.sizeMm ?? ""}`}>
                   {r.designName ?? <span className="text-ink-3">no design</span>}
                   {r.sizeMm && <span className="text-ink-3"> · {r.sizeMm}</span>}
                 </td>
-                <td className="text-ink-2 max-w-[150px] truncate">{r.rmiName}</td>
-                <td className="text-ink-2">{r.region ?? r.zone}</td>
+                <td className="text-ink-2 max-w-[120px] truncate" title={r.rmiName ?? ""}>{r.rmiName}</td>
+                <td className="text-ink-2 max-w-[110px] truncate">{r.region ?? r.zone}</td>
                 {status && (
                   <td>
                     <Status r={r} cur={cur} />

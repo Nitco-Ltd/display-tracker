@@ -20,7 +20,7 @@ export function Nav() {
   const qs = sp.toString();
   return (
     <nav
-      className="order-last lg:order-none w-full lg:w-auto flex gap-0.5 text-[13.5px] overflow-x-auto lg:overflow-visible whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-1 px-1"
+      className="order-last lg:order-none w-full lg:w-auto flex gap-1 text-[12.5px] overflow-x-auto lg:overflow-visible whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-1 px-1"
       aria-label="Pages"
     >
       {LINKS.map((l) => {
@@ -31,9 +31,7 @@ export function Nav() {
             key={l.href}
             href={href}
             aria-current={active ? "page" : undefined}
-            className={`shrink-0 px-3 py-1.5 rounded-full transition-colors duration-200 ${
-              active ? "bg-[var(--surface-3)] text-ink font-semibold" : "text-ink-2 hover:text-ink"
-            }`}
+            className={`shrink-0 px-2.5 py-1.5 transition-colors duration-200 ${active ? "text-white font-medium" : "text-[#9d978b] hover:text-[#e9e6df]"}`}
           >
             {l.label}
           </Link>

@@ -80,12 +80,12 @@ export function FilterBar({
   );
 
   return (
-    <div className={`card relative z-20 p-3 mb-6 transition-opacity duration-200 ${pending ? "opacity-60" : ""}`} aria-busy={pending}>
+    <div className={`card relative z-20 p-2.5 mb-5 transition-opacity duration-200 ${pending ? "opacity-60" : ""}`} aria-busy={pending}>
       <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 items-end">
         {primary.map(field)}
         <div className="flex gap-2 items-end">
           {(more.length > 0 || showSales) && (
-            <button onClick={() => setOpen((x) => !x)} className="btn btn-ghost h-[51px] flex-1 !rounded-[12px]" aria-expanded={open}>
+            <button onClick={() => setOpen((x) => !x)} className="btn btn-ghost h-[42px] flex-1 !rounded-[8px] !text-[12px]" aria-expanded={open}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                 <path d="M3 6h18M7 12h10M10 18h4" />
               </svg>
