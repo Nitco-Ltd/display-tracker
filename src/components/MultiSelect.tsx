@@ -20,6 +20,7 @@ export function MultiSelect({
   single?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [alignRight, setAlignRight] = useState(false); // near the right edge (phones): open towards the left
   const [q, setQ] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
@@ -46,7 +47,14 @@ export function MultiSelect({
 
   return (
     <div ref={ref} className="relative">
-      <button type="button" onClick={() => setOpen((o) => !o)} className="field" data-active={selected.length > 0 || open} aria-expanded={open}>
+      <button
+        type="button"
+        onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          setAlignRight(r.left + 300 > window.innerWidth - 12);
+          setOpen((o) => !o);
+        }}
+        className="field" data-active={selected.length > 0 || open} aria-expanded={open}>
         <span className="block text-[11px] font-medium text-ink-3 leading-none mb-1">{label}</span>
         <span className={`block truncate ${selected.length ? "text-ink font-medium" : "text-ink-2"}`}>{summary}</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-3 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden>
@@ -54,7 +62,10 @@ export function MultiSelect({
         </svg>
       </button>
       {open && (
-        <div className="absolute z-20 mt-1.5 w-[300px] max-w-[90vw] card p-2" style={{ boxShadow: "var(--shadow-lg)" }}>
+        <div
+          className={`fade-in absolute z-20 mt-1.5 w-[300px] max-w-[calc(100vw-24px)] card p-2 ${alignRight ? "right-0" : "left-0"}`}
+          style={{ boxShadow: "var(--shadow-lg)", borderRadius: 14 }}
+        >
           <input
             autoFocus
             value={q}

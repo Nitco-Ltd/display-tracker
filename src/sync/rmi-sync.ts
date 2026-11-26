@@ -17,6 +17,8 @@ import {
   parseRmiDate,
 } from "@/lib/normalize";
 import { rebuildDesignMap } from "./design-match";
+import { packagingFamilies } from "@/sales/window";
+import { boxDigits } from "@/sales/packaging";
 import { getState, nowIso, setState, startRun } from "./runs";
 
 const CATALOG_MAX_AGE_DAYS = 7;
@@ -144,6 +146,19 @@ export async function syncRmi(opts: { forceCatalog?: boolean } = {}): Promise<Rm
 
     // 5) Design -> material mapping.
     const mapping = await rebuildDesignMap();
+    // Twin codes in the same box size that BOTH sell: counted as one tile, but a person should confirm they are one product.
+    {
+      const { familyOf, codesOf } = await packagingFamilies();
+      const shown = new Set((await db.selectDistinct({ c: t.rmiDisplay.materialCode }).from(t.rmiDisplay)).map((r) => r.c).filter(Boolean) as string[]);
+      const selling = new Set((await db.selectDistinct({ c: t.sapSalesMonthly.materialCode }).from(t.sapSalesMonthly)).map((r) => r.c));
+      const doubtful: string[] = [];
+      for (const fam of new Set([...shown].map((c) => familyOf.get(c)).filter(Boolean) as string[])) {
+        const byBox = new Map<string, number>();
+        for (const c of codesOf.get(fam) ?? []) if (selling.has(c)) byBox.set(boxDigits(c) ?? "", (byBox.get(boxDigits(c) ?? "") ?? 0) + 1);
+        if ([...byBox.values()].some((n) => n > 1)) doubtful.push((codesOf.get(fam) ?? []).join("/"));
+      }
+      if (doubtful.length) warnings.push(`${doubtful.length} displayed tile(s) sell under two codes with the same box size (counted as one tile; confirm with sales ops): ${doubtful.slice(0, 5).join(", ")}`);
+    }
 
     const result: RmiSyncResult = {
       runId: run.id,

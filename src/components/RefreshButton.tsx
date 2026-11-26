@@ -28,7 +28,7 @@ export function RefreshButton() {
       <button
         onClick={run}
         disabled={state === "running"}
-        className="btn btn-primary"
+        className="btn h-8 text-[13px]"
         title="Pull the latest data from RMI and SAP now, then rebuild the reports"
       >
         {state === "running" ? "Refreshing…" : "Refresh now"}

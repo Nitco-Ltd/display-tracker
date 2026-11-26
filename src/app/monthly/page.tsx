@@ -2,8 +2,9 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { desc, lte } from "drizzle-orm";
 import { FilterBar } from "@/components/FilterBar";
-import { Section } from "@/components/Kpi";
-import { Insight, PageHeader } from "@/components/PageHeader";
+import { Kpi, KpiRow, Section } from "@/components/Kpi";
+import { Icon } from "@/components/Icon";
+import { PageHeader } from "@/components/PageHeader";
 import { SplitBar } from "@/components/SplitBar";
 import { Tabs } from "@/components/Tabs";
 import { filterOptions, type SearchParams } from "@/analytics/data";
@@ -32,7 +33,7 @@ function TreeRow({
   last,
 }: {
   label: string;
-  help: string;
+  help?: string;
   value: number;
   total: number;
   level: 0 | 1 | 2 | 3;
@@ -48,15 +49,15 @@ function TreeRow({
           {level > 0 && <span className="text-ink-3 font-normal" aria-hidden>{last ? "└" : "├"}</span>}
           <div>
             <div className="text-[14px]">{label}</div>
-            <div className="text-[12px] text-ink-3 font-normal">{help}</div>
+            {help && <div className="text-[12.5px] text-ink-3 font-normal">{help}</div>}
           </div>
         </div>
       </td>
       <td className="num text-[15px] whitespace-nowrap">{inr(value)}</td>
       <td className="num whitespace-nowrap">{pct(total ? value / total : NaN)}</td>
       <td className="hidden md:table-cell w-[30%] min-w-[90px]">
-        <div className="h-2.5 rounded-full bg-surface-0 overflow-hidden" aria-hidden>
-          <div className="h-full rounded-full" style={{ width: `${Math.min(100, share * 100)}%`, background: color }} />
+        <div className="h-2 rounded-full bg-surface-2 overflow-hidden" aria-hidden>
+          <div className="grow-x h-full rounded-full" style={{ width: `${Math.min(100, share * 100)}%`, background: color }} />
         </div>
       </td>
     </tr>
@@ -94,19 +95,19 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
   const otherTiles = r.displayDealers - r.displayedDesigns;
 
   const regionTable = (
-    <div className="overflow-auto">
+    <div className="overflow-auto max-h-[480px]">
       <table className="data">
         <thead>
           <tr>
             <th>Zone · Region</th>
             <th className="num">All sales</th>
-            <th className="num">Dealers without a display</th>
-            <th className="num">Dealers with a display</th>
-            <th className="num">…other tiles</th>
-            <th className="num">…tiles on display</th>
-            <th className="num">Tiles on display, % of all</th>
+            <th className="num">No display</th>
+            <th className="num">With a display</th>
+            <th className="num">Other tiles</th>
+            <th className="num">Tiles on display</th>
+            <th className="num">% on display</th>
             <th className="num">New displays</th>
-            <th className="num">Bought of the new tiles</th>
+            <th className="num">New tiles bought</th>
           </tr>
         </thead>
         <tbody>
@@ -139,7 +140,7 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
   const tileTable = (tiles: typeof r.tilesOnDisplay) => (
     <div className="overflow-auto max-h-[420px]">
       <table className="data">
-        <thead className="sticky top-0 bg-[var(--surface-1)]">
+        <thead>
           <tr>
             <th className="num">#</th>
             <th>Tile</th>
@@ -173,12 +174,19 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
   return (
     <>
       <PageHeader
-        title={`Sales in ${monthName(month)} · ${where}${who}`}
-        description={
+        eyebrow={`Monthly sales · ${where}${who}`}
+        title={
           <>
-            All tile sales in the chosen month (the same figures as the Sales data MIS), split by whether the dealer has a display, and whether the tile they bought
-            is on display at their shop. Pick the <b>sales month</b> below.
+            {inrCompact(r.total)} of tiles sold in {monthName(month)}
+            {month === cur ? <span className="text-ink-3"> so far</span> : null}
           </>
+        }
+        description={
+          r.total ? (
+            <>
+              <b className="font-semibold text-ink">{pct(pctA(r.displayedDesigns))}</b> was dealers buying a tile on display in their own shop.
+            </>
+          ) : undefined
         }
       />
       <Suspense>
@@ -190,57 +198,57 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
         />
       </Suspense>
 
-      <Insight>
-        Dealers here bought <b>{inr(r.total)}</b> of tiles in {monthName(month)}
-        {month === cur ? " (month so far)" : ""}. <b>{inrCompact(r.displayedDesigns)}</b> ({pct(pctA(r.displayedDesigns))}) was dealers buying a tile that is on
-        display at their own shop.
-        {includeExtra ? " Includes ZTDN, ZNTI and ZDMS invoices." : ""}
-      </Insight>
+      <KpiRow>
+        <Kpi icon="rupee" label="All sales" value={inrCompact(r.total)} sub={includeExtra ? "incl. debit notes & samples" : "all tiles, all dealers"} />
+        <Kpi icon="store" label="Dealers with a display" value={inrCompact(r.displayDealers)} sub={`${pct(pctA(r.displayDealers))} of sales · ${num(r.displayDealerCount)} dealers`} />
+        <Kpi icon="displays" label="Tiles on display" value={inrCompact(r.displayedDesigns)} sub={`${pct(pctA(r.displayedDesigns))} of sales`} tone="green" />
+        <Kpi icon="sparkle" label="New displays" value={num(r.monthDisplays)} sub={`at ${num(r.monthDealerCount)} dealer${r.monthDealerCount === 1 ? "" : "s"}`} tone="orange" />
+      </KpiRow>
 
       <Section
-        title={`Where ${monthName(month)}'s sales went`}
-        note={<>“On display” = the RMI recorded that tile at that dealer in {monthName(month)} or earlier.</>}
+        title="Where the sales came from"
+        note={<>“On display” means the RMI recorded that tile at that dealer in {monthName(month)} or earlier.</>}
       >
         <SplitBar
           ariaLabel="All sales split into tiles on display, other tiles, and dealers without a display"
           total={r.total}
           parts={[
-            { code: "", label: "Tiles on display (dealer with a display)", value: r.displayedDesigns },
-            { code: "", label: "Other tiles (dealer with a display)", value: otherTiles },
+            { code: "", label: "Tiles on display", value: r.displayedDesigns },
+            { code: "", label: "Other tiles, same dealers", value: otherTiles },
             { code: "", label: "Dealers without a display", value: noDisplay },
           ]}
         />
-        <div className="mt-3 overflow-auto">
+        <div className="mt-6 overflow-auto">
           <table className="data">
             <thead>
               <tr>
-                <th>Sales</th>
+                <th>Breakdown</th>
                 <th className="num">Amount</th>
                 <th className="num">% of all sales</th>
                 <th aria-label="share" className="hidden md:table-cell" />
               </tr>
             </thead>
             <tbody>
-              <TreeRow level={0} bold color={COLOR.total} label="All sales" help="Every tile sold in this area this month, to every dealer." value={r.total} total={r.total} />
-              <TreeRow level={1} color={COLOR.noDisplay} label="Dealers without a display" help="Dealers with no display in the RMI app." value={noDisplay} total={r.total} />
+              <TreeRow level={0} bold color={COLOR.total} label="All sales" value={r.total} total={r.total} />
+              <TreeRow level={1} color={COLOR.noDisplay} label="Dealers without a display" value={noDisplay} total={r.total} />
               <TreeRow
                 level={1}
                 bold
                 color={COLOR.total}
                 last
                 label="Dealers with a display"
-                help={`Everything bought by the ${num(r.displayDealerCount)} dealers who have a display.`}
+                help={`${num(r.displayDealerCount)} dealers`}
                 value={r.displayDealers}
                 total={r.total}
               />
-              <TreeRow level={2} color={COLOR.otherTiles} label="…other tiles" help="Tiles that are not on display at the dealer's own shop." value={otherTiles} total={r.total} />
+              <TreeRow level={2} color={COLOR.otherTiles} label="Other tiles" value={otherTiles} total={r.total} />
               <TreeRow
                 level={2}
                 bold
                 color={COLOR.onDisplay}
                 last
-                label="…tiles on display"
-                help="Tiles that are on display at the dealer's own shop."
+                label="Tiles on display"
+                help="on display in the dealer's own shop"
                 value={r.displayedDesigns}
                 total={r.total}
               />
@@ -248,8 +256,8 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
                 level={3}
                 color={COLOR.onDisplay}
                 last
-                label={`of which: tiles put on display in ${monthName(month)}`}
-                help={`Only the displays put up this month (${num(r.monthDisplays)} display${r.monthDisplays === 1 ? "" : "s"}). = the ${monthName(month)} column of the Display Tracker Report.`}
+                label={`of which: put on display in ${monthName(month)}`}
+                help={`${num(r.monthDisplays)} new display${r.monthDisplays === 1 ? "" : "s"}`}
                 value={r.monthDesigns}
                 total={r.total}
               />
@@ -257,19 +265,20 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
           </table>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-line bg-surface-0 px-3 py-2.5">
-          <div className="flex-1 min-w-[260px] text-[13px]">
-            <b>New this month:</b> {num(r.monthDisplays)} display{r.monthDisplays === 1 ? "" : "s"} put up at {num(r.monthDealerCount)} dealer
-            {r.monthDealerCount === 1 ? "" : "s"}. {r.monthDealerCount === 1 ? "That dealer" : "Those dealers"} bought{" "}
-            <b>{inr(r.monthDesigns)}</b> of the newly displayed tiles in {monthName(month)}
-            {r.monthDealers ? <> (out of {inr(r.monthDealers)} they bought in all)</> : null}. This is the {monthName(month)} column of the {monthName(month)} Display
-            Tracker Report.
+        <div className="mt-6 flex flex-wrap items-center gap-3 rounded-[16px] bg-surface-2 px-4 py-3.5">
+          <span className="h-8 w-8 rounded-[10px] flex items-center justify-center shrink-0" style={{ color: "var(--series-2)", background: "color-mix(in srgb, var(--series-2) 12%, transparent)" }}>
+            <Icon name="sparkle" size={17} />
+          </span>
+          <div className="flex-1 min-w-[240px] text-[13.5px]">
+            <b>New this month:</b> {num(r.monthDisplays)} display{r.monthDisplays === 1 ? "" : "s"} at {num(r.monthDealerCount)} dealer
+            {r.monthDealerCount === 1 ? "" : "s"}, who bought <b>{inr(r.monthDesigns)}</b> of those tiles.
           </div>
           <Link href={displaysHref} className="btn">
-            See these displays
+            View displays
           </Link>
           <Link href={reportHref} className="btn btn-primary">
-            Download report
+            <Icon name="download" size={16} />
+            Report
           </Link>
         </div>
       </Section>
@@ -277,13 +286,9 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
       <Section title="Details">
         <Tabs
           tabs={[
-            { id: "regions", label: "By region", hint: "The same split, by the customer's region in SAP (sales office)." },
-            { id: "on", label: `Tiles on display (${inrCompact(r.displayedDesigns)})`, hint: "Top 25 tiles bought by a dealer who has that tile on display at its shop." },
-            {
-              id: "other",
-              label: `Other tiles (${inrCompact(otherTiles)})`,
-              hint: "Top 25 tiles bought by dealers with a display, where that tile is not on display at their shop (another dealer may display it).",
-            },
+            { id: "regions", label: "By region" },
+            { id: "on", label: "Top tiles on display", hint: "Top 25 tiles bought by dealers who display them." },
+            { id: "other", label: "Top other tiles", hint: "Top 25 tiles bought by dealers with a display, where that tile isn't on display in their shop." },
           ]}
         >
           {regionTable}

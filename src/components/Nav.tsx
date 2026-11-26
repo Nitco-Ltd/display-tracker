@@ -8,7 +8,7 @@ const LINKS = [
   { href: "/leaderboards", label: "Rankings" },
   { href: "/zero-sales", label: "Follow-up" },
   { href: "/displays", label: "Displays" },
-  { href: "/download", label: "Download report" },
+  { href: "/download", label: "Report" },
 ];
 
 // Filter pages share the same URL filters, so switching tabs keeps the current selection.
@@ -19,7 +19,10 @@ export function Nav() {
   const sp = useSearchParams();
   const qs = sp.toString();
   return (
-    <nav className="flex flex-wrap gap-0.5 text-[13px]" aria-label="Pages">
+    <nav
+      className="order-last lg:order-none w-full lg:w-auto flex gap-0.5 text-[13.5px] overflow-x-auto lg:overflow-visible whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-1 px-1"
+      aria-label="Pages"
+    >
       {LINKS.map((l) => {
         const active = l.href === "/" ? path === "/" : path.startsWith(l.href);
         const href = SHARES_FILTERS.has(l.href) && SHARES_FILTERS.has(path) && qs ? `${l.href}?${qs}` : l.href;
@@ -28,8 +31,8 @@ export function Nav() {
             key={l.href}
             href={href}
             aria-current={active ? "page" : undefined}
-            className={`px-3 py-1.5 rounded-full transition-colors ${
-              active ? "bg-[var(--accent-soft)] text-accent font-semibold" : "text-ink-2 hover:text-ink hover:bg-surface-2"
+            className={`shrink-0 px-3 py-1.5 rounded-full transition-colors duration-200 ${
+              active ? "bg-[var(--surface-3)] text-ink font-semibold" : "text-ink-2 hover:text-ink"
             }`}
           >
             {l.label}

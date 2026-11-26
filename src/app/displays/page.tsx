@@ -3,7 +3,8 @@ import Link from "next/link";
 import { FilterBar } from "@/components/FilterBar";
 import { Section } from "@/components/Kpi";
 import { PageHeader } from "@/components/PageHeader";
-import { DisplayTable, cohortNote } from "@/components/DisplayTable";
+import { DisplayTable } from "@/components/DisplayTable";
+import { Icon } from "@/components/Icon";
 import { filterOptions, loadRows, type SearchParams } from "@/analytics/data";
 import { num } from "@/lib/format";
 
@@ -27,29 +28,31 @@ export default async function Displays({ searchParams }: { searchParams: Promise
   return (
     <>
       <PageHeader
-        title="All displays"
-        description="Every display recorded in the RMI app, with the dealer's purchases of that tile from SAP: the month before, the display month, and the months after."
+        eyebrow="Displays"
+        title={`${num(rows.length)} display${rows.length === 1 ? "" : "s"}`}
+        description="Every display in the RMI app, with what the dealer bought of that tile."
       />
       <Suspense>
         <FilterBar options={options} />
       </Suspense>
       <Section
-        title={`Displays (${num(rows.length)})`}
-        note={<>All report columns plus a sales summary. {cohortNote(rows)}. “After” = M+1 onwards, months so far. Avg value = sum of the 14-month window ÷ 14 (report rule).</>}
+        title="All displays"
+        note="“After display” is everything bought from the month after display until now. The Excel file has every report column."
         action={
           <a href={`/api/export?${qs(filtersOnly)}`} className="btn btn-primary">
-            Export to Excel
+            <Icon name="download" size={16} />
+            Excel
           </a>
         }
       >
         <DisplayTable rows={slice} />
         {pages > 1 && (
-          <div className="flex items-center gap-3 mt-3 text-[13px]">
-            {page > 1 && <Link href={`/displays?${qs(sp, { page: String(page - 1) })}`}>← Previous</Link>}
+          <div className="flex items-center gap-2 mt-4 text-[13px]">
+            {page > 1 && <Link className="btn" href={`/displays?${qs(sp, { page: String(page - 1) })}`}>Previous</Link>}
             <span className="text-ink-3">
               Page {page} of {pages}
             </span>
-            {page < pages && <Link href={`/displays?${qs(sp, { page: String(page + 1) })}`}>Next →</Link>}
+            {page < pages && <Link className="btn" href={`/displays?${qs(sp, { page: String(page + 1) })}`}>Next</Link>}
           </div>
         )}
       </Section>

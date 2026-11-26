@@ -1,49 +1,41 @@
-// Display rows with all report columns A–U plus a sales summary.
-import { currentMonth, rowSummary } from "@/analytics/metrics";
+// Display rows: the columns people need to act on. Every report column (A–U) is in the Excel export.
+import { currentMonth, isConverted, isLinked, isMeasurable, rowSummary } from "@/analytics/metrics";
 import type { DisplayWithSales } from "@/sales/window";
 import { inr, m2, monthName } from "@/lib/format";
 
-const COLS: [string, (r: DisplayWithSales) => string | null][] = [
-  ["Sequence No", (r) => r.refNo],
-  ["Display Date", (r) => r.displayDateRaw],
-  ["RMI Name", (r) => r.rmiName],
-  ["Dealer", (r) => r.dealerName],
-  ["Dealer Status", (r) => r.dealerStatus],
-  ["Zone", (r) => r.zone],
-  ["Region", (r) => r.region],
-  ["Location", (r) => r.location],
-  ["Dealer / Franchise", (r) => r.dealerCategory],
-  ["Franchise Type", (r) => r.franchiseType],
-  ["Displayed Where", (r) => r.displayedWhere],
-  ["Cassette Type", (r) => r.cassetteType],
-  ["Cassette No", (r) => r.cassetteNumber],
-  ["Panel No", (r) => r.panelNo],
-  ["Panel Size", (r) => r.panelSize],
-  ["Product Type", (r) => r.productType],
-  ["Size (MM)", (r) => r.sizeMm],
-  ["Design Name", (r) => r.designName],
-  ["Design Status", (r) => r.designStatus],
-  ["Status", (r) => r.status],
-];
+function Status({ r, cur }: { r: DisplayWithSales; cur: string }) {
+  const [label, color] = !isLinked(r)
+    ? ["Tile not in SAP", "var(--text-muted)"]
+    : !isMeasurable(r, cur)
+      ? ["Too new", "var(--text-muted)"]
+      : isConverted(r, cur)
+        ? ["Bought", "var(--status-good-text)"]
+        : ["Not yet", "var(--status-warning-text)"];
+  return (
+    <span
+      className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-semibold"
+      style={{ color, background: `color-mix(in srgb, ${color} 12%, transparent)` }}
+    >
+      {label}
+    </span>
+  );
+}
 
-const MAP_LABEL: Record<string, string> = { mapped: "", needs_review: "design not matched", unmapped: "design not found", no_design: "no design" };
-
-export function DisplayTable({ rows }: { rows: DisplayWithSales[] }) {
+export function DisplayTable({ rows, status = true }: { rows: DisplayWithSales[]; status?: boolean }) {
   const cur = currentMonth();
   return (
-    <div className="overflow-auto max-h-[70vh] border border-line rounded-lg">
+    <div className="overflow-auto max-h-[70vh] -mx-1">
       <table className="data">
         <thead>
           <tr>
-            {COLS.map(([h]) => (
-              <th key={h}>{h}</th>
-            ))}
-            <th className="num">M−1 value</th>
-            <th className="num">After value</th>
-            <th className="num">After volume</th>
-            <th className="num">Months after</th>
-            <th className="num">Avg value (÷14)</th>
-            <th>SAP material</th>
+            <th>Date</th>
+            <th>Dealer</th>
+            <th>Tile</th>
+            <th>RMI</th>
+            <th>Region</th>
+            {status && <th>Status</th>}
+            <th className="num">Month before</th>
+            <th className="num">After display</th>
           </tr>
         </thead>
         <tbody>
@@ -51,23 +43,31 @@ export function DisplayTable({ rows }: { rows: DisplayWithSales[] }) {
             const s = rowSummary(r, cur);
             return (
               <tr key={r.refNo}>
-                {COLS.map(([h, f]) => (
-                  <td key={h} className={h === "Dealer" || h === "Design Name" ? "max-w-[240px] truncate" : ""} title={f(r) ?? ""}>
-                    {f(r) ?? ""}
+                <td className="text-ink-2">{r.displayDateRaw}</td>
+                <td className="max-w-[230px] truncate font-medium" title={r.dealerName ?? ""}>
+                  {r.dealerName}
+                </td>
+                <td className="max-w-[210px] truncate" title={`${r.designName ?? ""} · ${r.sizeMm ?? ""}`}>
+                  {r.designName ?? <span className="text-ink-3">no design</span>}
+                  {r.sizeMm && <span className="text-ink-3"> · {r.sizeMm}</span>}
+                </td>
+                <td className="text-ink-2 max-w-[150px] truncate">{r.rmiName}</td>
+                <td className="text-ink-2">{r.region ?? r.zone}</td>
+                {status && (
+                  <td>
+                    <Status r={r} cur={cur} />
                   </td>
-                ))}
-                <td className="num">{inr(s.beforeValue)}</td>
-                <td className="num">{inr(s.afterValue)}</td>
-                <td className="num">{m2(s.afterVolume)}</td>
-                <td className="num">{s.afterMonths}</td>
-                <td className="num">{inr(r.avgValue)}</td>
-                <td className="text-ink-3">{r.materialCode ?? MAP_LABEL[r.mapStatus ?? ""] ?? ""}</td>
+                )}
+                <td className="num text-ink-2">{inr(s.beforeValue)}</td>
+                <td className="num font-medium" title={`${m2(s.afterVolume)} over ${s.afterMonths} month${s.afterMonths === 1 ? "" : "s"}`}>
+                  {inr(s.afterValue)}
+                </td>
               </tr>
             );
           })}
         </tbody>
       </table>
-      {!rows.length && <div className="p-4 text-[13px] text-ink-3">No displays match the current filters.</div>}
+      {!rows.length && <div className="p-6 text-center text-[13.5px] text-ink-3">No displays for this selection.</div>}
     </div>
   );
 }

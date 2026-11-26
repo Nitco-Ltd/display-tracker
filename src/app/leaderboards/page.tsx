@@ -7,7 +7,7 @@ import { Tabs } from "@/components/Tabs";
 import { filterOptions, loadRows, type SearchParams } from "@/analytics/data";
 import { currentMonth, groupStats, type GroupStat } from "@/analytics/metrics";
 import type { DisplayWithSales } from "@/sales/window";
-import { inr, inrCompact, num, pct } from "@/lib/format";
+import { inrCompact, num, pct } from "@/lib/format";
 
 const MIN_PAIRS = 10; // the "bought afterwards" ranking ignores groups with fewer measurable displays
 const TOP = 25;
@@ -35,19 +35,18 @@ function Ranking({ one, stats, sort }: { one: string; stats: GroupStat[]; sort: 
   const maxV = Math.max(1e-9, ...top.map(metric));
   return (
     <div>
-      <div className="text-[12px] text-ink-3 mb-2">
+      <div className="text-[12.5px] text-ink-3 mb-3">
         Top {top.length} of {num(ranked.length)}
-        {sort === "conversion" ? ` (only those with at least ${MIN_PAIRS} displays old enough to measure)` : ""}.
+        {sort === "conversion" ? ` · at least ${MIN_PAIRS} displays ready to check` : ""}
       </div>
-      <div className="overflow-auto max-h-[560px]">
+      <div className="overflow-auto max-h-[600px]">
         <table className="data">
-          <thead className="sticky top-0 bg-[var(--surface-1)] z-[1]">
+          <thead>
             <tr>
-              <th className="num">#</th>
+              <th className="num w-[44px]">#</th>
               <th>{one}</th>
-              <th style={{ width: "26%" }}>{sort === "conversion" ? "Dealer bought the tile afterwards" : "Sales of displayed tiles, after display"}</th>
-              <th className="num">Sales after display</th>
-              <th className="num">Bought afterwards</th>
+              <th style={{ width: "34%" }}>{sort === "conversion" ? "Led to a purchase" : "Sales after display"}</th>
+              <th className="num">{sort === "conversion" ? "Sales after display" : "Led to a purchase"}</th>
               <th className="num">Displays</th>
             </tr>
           </thead>
@@ -55,28 +54,30 @@ function Ranking({ one, stats, sort }: { one: string; stats: GroupStat[]; sort: 
             {top.map((s, i) => (
               <tr key={s.key}>
                 <td className="num text-ink-3">{i + 1}</td>
-                <td className="max-w-[320px] truncate" title={s.label}>
+                <td className="max-w-[320px] truncate font-medium" title={s.label}>
                   {s.label}
                 </td>
                 <td>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2.5 flex-1 rounded-full bg-surface-0 overflow-hidden" aria-hidden>
-                      <div className="h-full rounded-full" style={{ width: `${Math.max(0, (metric(s) / maxV) * 100)}%`, background: "var(--series-1)" }} />
+                  <div className="flex items-center gap-3">
+                    <div className="h-2 flex-1 rounded-full bg-surface-2 overflow-hidden" aria-hidden>
+                      <div
+                        className="grow-x h-full rounded-full"
+                        style={{ width: `${Math.max(0, (metric(s) / maxV) * 100)}%`, background: "var(--series-1)", animationDelay: `${Math.min(i * 25, 400)}ms` }}
+                      />
                     </div>
-                    <span className="w-[64px] text-right text-[12px] text-ink-2">{sort === "conversion" ? pct(s.conversion) : inrCompact(s.afterValue)}</span>
+                    <span className="w-[72px] text-right font-semibold">{sort === "conversion" ? pct(s.conversion) : inrCompact(s.afterValue)}</span>
                   </div>
                 </td>
-                <td className="num">{inr(s.afterValue)}</td>
-                <td className="num" title={`${num(s.convertedPairs)} of ${num(s.measurablePairs)} displays`}>
-                  {pct(s.conversion)} <span className="text-ink-3">({num(s.convertedPairs)}/{num(s.measurablePairs)})</span>
+                <td className="num text-ink-2" title={`${num(s.convertedPairs)} of ${num(s.measurablePairs)} displays`}>
+                  {sort === "conversion" ? inrCompact(s.afterValue) : pct(s.conversion)}
                 </td>
-                <td className="num">{num(s.displays)}</td>
+                <td className="num text-ink-2">{num(s.displays)}</td>
               </tr>
             ))}
             {!top.length && (
               <tr>
-                <td colSpan={6} className="text-ink-3">
-                  Nothing to rank with the current filters.
+                <td colSpan={5} className="text-ink-3">
+                  Nothing to rank for this selection.
                 </td>
               </tr>
             )}
@@ -94,25 +95,22 @@ export default async function Rankings({ searchParams }: { searchParams: Promise
   const sort = sp.sort === "conversion" ? "conversion" : "sales";
   return (
     <>
-      <PageHeader
-        title="Rankings"
-        description="Which zones, RMIs, dealers and tiles get the most out of their displays: sales of the displayed tile by the same dealer after the display month, and how often the dealer bought it at all."
-      />
+      <PageHeader eyebrow="Rankings" title="Where displays work best" description="Zones, RMIs, dealers and tiles, ranked by what dealers bought after the display." />
       <Suspense>
         <FilterBar options={options} />
       </Suspense>
       <Section
-        title={sort === "conversion" ? "Ranked by how often the dealer bought the tile afterwards" : "Ranked by sales of the displayed tile after display"}
+        title={sort === "conversion" ? "Ranked by purchase rate" : "Ranked by sales after display"}
         action={
           <div className="flex items-center gap-2">
-            <span className="text-[12px] text-ink-3">Rank by</span>
+            <span className="text-[13px] text-ink-3">Rank by</span>
             <Suspense>
               <ParamLinks
                 param="sort"
                 fallback="sales"
                 options={[
                   { value: "sales", label: "Sales after display" },
-                  { value: "conversion", label: "Bought afterwards (%)" },
+                  { value: "conversion", label: "Purchase rate" },
                 ]}
               />
             </Suspense>

@@ -4,6 +4,7 @@ import { Section } from "@/components/Kpi";
 import { PageHeader } from "@/components/PageHeader";
 import { ParamLinks } from "@/components/SortLinks";
 import { DisplayTable } from "@/components/DisplayTable";
+import { Icon } from "@/components/Icon";
 import { filterOptions, loadRows, type SearchParams } from "@/analytics/data";
 import { currentMonth, zeroSales } from "@/analytics/metrics";
 import { num } from "@/lib/format";
@@ -22,30 +23,34 @@ export default async function ZeroSales({ searchParams }: { searchParams: Promis
   return (
     <>
       <PageHeader
-        title="Follow-up: displays with no purchase yet"
-        description="Displays where the dealer hasn't bought the displayed tile in the months after it was put up. Use this list to follow up with RMIs and dealers."
+        eyebrow="Follow-up"
+        title={`${num(list.length)} display${list.length === 1 ? "" : "s"} with no purchase yet`}
+        description={`The dealer hasn't bought the tile in the ${n} month${n > 1 ? "s" : ""} after display. A good list for the next visit.`}
       />
       <Suspense>
         <FilterBar options={options} />
       </Suspense>
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <span className="text-[13px] text-ink-2">No purchase within</span>
-        <Suspense>
-          <ParamLinks param="n" fallback="3" options={CHOICES.map((c) => ({ value: String(c), label: `${c} month${c > 1 ? "s" : ""}` }))} />
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-5">
+        <span className="text-[13.5px] text-ink-2">No purchase within</span>
+        <div className="max-w-full overflow-x-auto [scrollbar-width:none]">
+          <Suspense>
+            <ParamLinks param="n" fallback="3" options={CHOICES.map((c) => ({ value: String(c), label: `${c} month${c > 1 ? "s" : ""}` }))} />
         </Suspense>
-        <span className="text-[13px] text-ink-2">after the display month</span>
+        </div>
+        <span className="text-[13.5px] text-ink-2">of display</span>
       </div>
       <Section
-        title={`${num(list.length)} displays with no purchase in the ${n} month${n > 1 ? "s" : ""} after display`}
-        note={`Only displays old enough to have had ${n} full month${n > 1 ? "s" : ""} after the display month, and whose tile is matched to SAP. Displays with a blank or unknown design aren't listed.`}
+        title="Displays to follow up"
+        note={`Only displays up for ${n} full month${n > 1 ? "s" : ""} or more, with a tile found in SAP.`}
         action={
           <a href={`/api/export?${qs.toString()}`} className="btn btn-primary">
-            Export to Excel
+            <Icon name="download" size={16} />
+            Excel
           </a>
         }
       >
-        <DisplayTable rows={list.slice(0, 100)} />
-        {list.length > 100 && <div className="text-[12px] text-ink-3 mt-2">Showing the first 100. Export to Excel for all {num(list.length)}.</div>}
+        <DisplayTable rows={list.slice(0, 100)} status={false} />
+        {list.length > 100 && <div className="text-[12.5px] text-ink-3 mt-3">Showing 100 of {num(list.length)}. The Excel file has them all.</div>}
       </Section>
     </>
   );

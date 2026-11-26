@@ -2,73 +2,84 @@
 
 /* ───────────────────────────────────────────────────────────────────────────────────────────
    Display Tracker design system.
-   Calm, analytical: cool neutral surfaces, one accent (data blue), a small NITCO-red brand mark.
-   Chart colours are the dataviz reference palette (validated for colour-blind readers, both modes).
-   Light by default; dark follows the OS.
+   Modelled on Apple's product and HIG pages: a soft grey canvas, white rounded cards with no
+   borders and soft shadows, the system font (SF Pro on Apple devices, Inter elsewhere), one blue
+   for interaction and the main series, and calm motion that respects "reduce motion".
+   Chart colours: blue / orange / green, checked with the dataviz validator against both surfaces
+   (colour-blind separation, contrast). NITCO red is used only for the logo mark.
    ─────────────────────────────────────────────────────────────────────────────────────────── */
 :root {
   color-scheme: light;
-  --surface-0: #f4f5f7; /* page */
+  --surface-0: #f5f5f7; /* page */
   --surface-1: #ffffff; /* cards */
-  --surface-2: #f8f9fb; /* table heads, wells */
-  --border: #e4e7ec;
-  --border-strong: #d0d5dd;
-  --text-primary: #101828;
-  --text-secondary: #475467;
-  --text-muted: #667085;
-  --accent: #2a78d6;
-  --accent-hover: #1f63b8;
-  --accent-soft: #eaf2fc;
+  --surface-2: #f5f5f7; /* wells, table heads */
+  --surface-3: #e8e8ed; /* tracks, pressed */
+  --border: #e5e5ea;
+  --border-strong: #d2d2d7;
+  --text-primary: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --text-muted: #86868b;
+  --accent: #0071e3;
+  --accent-hover: #0077ed;
+  --accent-soft: #e8f1fc;
   --accent-ink: #ffffff;
   --brand: #d71920; /* NITCO red: logo mark only */
-  --series-1: #2a78d6;
-  --series-1-soft: #86b6ef;
-  --series-2: #eb6834; /* categorical slots 2–3 (dataviz reference palette, validated all-pairs with slot 1) */
-  --series-3: #1baf7a;
-  --gridline: #eef0f3;
-  --axis: #cfd4dc;
-  --status-good: #12b76a;
-  --status-good-text: #027a48;
-  --status-warning: #f79009;
-  --status-critical: #d92d20;
-  --banner-warning-bg: #fffaeb;
-  --banner-critical-bg: #fef3f2;
-  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
-  --shadow-md: 0 1px 3px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.04);
-  --shadow-lg: 0 12px 24px -6px rgba(16, 24, 40, 0.12), 0 4px 8px -4px rgba(16, 24, 40, 0.06);
+  --series-1: #0071e3; /* tiles on display / bought */
+  --series-1-soft: #9cc5f3;
+  --series-2: #e8692e;
+  --series-3: #1a9e6b;
+  --neutral-mark: #c7c7cc; /* "not yet" */
+  --neutral-faint: #e1e1e6; /* "not checked yet" */
+  --gridline: #f0f0f2;
+  --axis: #d2d2d7;
+  --status-good: #34c759;
+  --status-good-text: #248a3d;
+  --status-warning: #ff9f0a;
+  --status-warning-text: #b25000;
+  --status-critical: #ff3b30;
+  --banner-warning-bg: #fff8eb;
+  --banner-critical-bg: #fff1f0;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+  --ease: cubic-bezier(0.22, 0.8, 0.24, 1);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --surface-0: #0c0e12;
-    --surface-1: #14171d;
-    --surface-2: #191c23;
-    --border: #262a33;
-    --border-strong: #353a46;
-    --text-primary: #eceef2;
-    --text-secondary: #b3b9c6;
-    --text-muted: #8a91a0;
-    --accent: #3987e5;
-    --accent-hover: #5a9cec;
-    --accent-soft: #15243a;
+    --surface-0: #000000;
+    --surface-1: #1c1c1e;
+    --surface-2: #2c2c2e;
+    --surface-3: #3a3a3c;
+    --border: #2c2c2e;
+    --border-strong: #3a3a3c;
+    --text-primary: #f5f5f7;
+    --text-secondary: #a1a1a6;
+    --text-muted: #8e8e93;
+    --accent: #0a84ff;
+    --accent-hover: #409cff;
+    --accent-soft: #0a2540;
     --accent-ink: #ffffff;
     --brand: #e5383f;
-    --series-1: #3987e5;
-    --series-1-soft: #256abf;
-    --series-2: #d95926;
-    --series-3: #199e70;
-    --gridline: #1f232b;
-    --axis: #3a404c;
-    --status-good: #32d583;
-    --status-good-text: #6ce9a6;
-    --status-warning: #fdb022;
-    --status-critical: #f97066;
-    --banner-warning-bg: #2a2110;
-    --banner-critical-bg: #2c1513;
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow-md: 0 1px 3px rgba(0, 0, 0, 0.5);
-    --shadow-lg: 0 16px 32px -8px rgba(0, 0, 0, 0.6);
+    --series-1: #0a84ff;
+    --series-1-soft: #1f4f86;
+    --series-2: #e0652c;
+    --series-3: #1f9e6f;
+    --neutral-mark: #636366;
+    --neutral-faint: #3a3a3c;
+    --gridline: #2a2a2c;
+    --axis: #48484a;
+    --status-good: #30d158;
+    --status-good-text: #30d158;
+    --status-warning: #ffd60a;
+    --status-warning-text: #ffd60a;
+    --status-critical: #ff453a;
+    --banner-warning-bg: #2b2205;
+    --banner-critical-bg: #2c1210;
+    --shadow-sm: none;
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.7);
   }
 }
 
@@ -81,7 +92,7 @@
   --color-ink-2: var(--text-secondary);
   --color-ink-3: var(--text-muted);
   --color-accent: var(--accent);
-  --font-sans: var(--font-inter), "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-inter), "Segoe UI", system-ui, "Helvetica Neue", Arial, sans-serif;
 }
 
 body {
@@ -89,7 +100,7 @@ body {
   color: var(--text-primary);
   font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
-  font-feature-settings: "cv11", "ss01";
+  letter-spacing: -0.003em;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -98,17 +109,41 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent);
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: 8px;
+}
+
+/* ── Type ─────────────────────────────────────────────────────────────────────────────── */
+.eyebrow {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0;
+}
+.headline {
+  font-size: clamp(28px, 3.4vw, 40px);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.08;
+}
+.stat {
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
 }
 
 /* ── Surfaces ─────────────────────────────────────────────────────────────────────────── */
 .card {
   background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: 14px;
+  border: 1px solid transparent;
+  border-radius: 20px;
   box-shadow: var(--shadow-sm);
+}
+@media (prefers-color-scheme: dark) {
+  .card {
+    border-color: var(--border);
+  }
 }
 
 /* ── Buttons ──────────────────────────────────────────────────────────────────────────── */
@@ -117,77 +152,80 @@ body {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 34px;
-  padding: 0 14px;
-  border-radius: 9px;
-  font-size: 13px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 14px;
   font-weight: 500;
   white-space: nowrap;
-  border: 1px solid var(--border-strong);
-  background: var(--surface-1);
+  border: 1px solid transparent;
+  background: var(--surface-3);
   color: var(--text-primary);
-  box-shadow: var(--shadow-sm);
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition: background 0.2s var(--ease), transform 0.2s var(--ease);
 }
 .btn:hover {
-  background: var(--surface-2);
+  background: color-mix(in srgb, var(--surface-3) 80%, var(--text-primary) 8%);
+}
+.btn:active {
+  transform: scale(0.97);
 }
 .btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: default;
 }
 .btn-primary {
   background: var(--accent);
-  border-color: var(--accent);
   color: var(--accent-ink);
 }
 .btn-primary:hover {
   background: var(--accent-hover);
-  border-color: var(--accent-hover);
 }
 .btn-ghost {
-  border-color: transparent;
   background: transparent;
-  box-shadow: none;
-  color: var(--text-secondary);
+  color: var(--accent);
 }
 .btn-ghost:hover {
-  background: var(--surface-2);
-  color: var(--text-primary);
+  background: var(--accent-soft);
 }
 
 /* ── Segmented control (switches, tabs) ───────────────────────────────────────────────── */
 .seg {
   display: inline-flex;
-  padding: 3px;
+  padding: 2px;
   gap: 2px;
   border-radius: 10px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  background: var(--surface-3);
 }
 .seg > button,
 .seg > a {
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 7px;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 8px;
   font-size: 13px;
-  color: var(--text-secondary);
+  font-weight: 500;
+  color: var(--text-primary);
   display: inline-flex;
   align-items: center;
   white-space: nowrap;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.2s var(--ease), box-shadow 0.2s var(--ease);
 }
 .seg > button:hover,
 .seg > a:hover {
-  color: var(--text-primary);
+  background: color-mix(in srgb, var(--surface-1) 50%, transparent);
 }
 .seg > [aria-pressed="true"],
 .seg > [aria-selected="true"],
 .seg > [data-active="true"] {
   background: var(--surface-1);
-  color: var(--text-primary);
   font-weight: 600;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+}
+@media (prefers-color-scheme: dark) {
+  .seg > [aria-pressed="true"],
+  .seg > [aria-selected="true"],
+  .seg > [data-active="true"] {
+    background: #636366;
+  }
 }
 
 /* ── Chips ────────────────────────────────────────────────────────────────────────────── */
@@ -195,34 +233,36 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 26px;
-  padding: 0 10px;
+  height: 28px;
+  padding: 0 12px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 12.5px;
+  font-weight: 500;
   background: var(--accent-soft);
   color: var(--accent);
-  border: 1px solid transparent;
+  transition: background 0.2s var(--ease);
 }
 .chip:hover {
-  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent-soft) 70%, var(--accent) 15%);
 }
 
 /* ── Form field (filters) ─────────────────────────────────────────────────────────────── */
 .field {
   width: 100%;
   text-align: left;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--surface-1);
-  padding: 6px 30px 6px 11px;
-  font-size: 13px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: var(--surface-2);
+  padding: 7px 30px 7px 12px;
+  font-size: 13.5px;
   position: relative;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: background 0.2s var(--ease), border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
 }
 .field:hover {
-  border-color: var(--border-strong);
+  background: var(--surface-3);
 }
 .field[data-active="true"] {
+  background: var(--surface-1);
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
@@ -232,31 +272,24 @@ table.data {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 13px;
+  font-size: 13.5px;
 }
 table.data th {
   text-align: left;
   font-weight: 600;
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-muted);
+  font-size: 12px;
+  color: var(--text-secondary);
   border-bottom: 1px solid var(--border);
-  padding: 9px 12px;
+  padding: 10px 12px;
   white-space: nowrap;
   position: sticky;
   top: 0;
-  background: var(--surface-2);
-}
-table.data th:first-child {
-  border-top-left-radius: 8px;
-}
-table.data th:last-child {
-  border-top-right-radius: 8px;
+  background: var(--surface-1);
+  z-index: 1;
 }
 table.data td {
   border-bottom: 1px solid var(--gridline);
-  padding: 9px 12px;
+  padding: 11px 12px;
   white-space: nowrap;
 }
 table.data tbody tr:last-child td {
@@ -266,11 +299,86 @@ table.data td.num,
 table.data th.num {
   text-align: right;
 }
+table.data tbody tr {
+  transition: background 0.15s;
+}
 table.data tbody tr:hover td {
   background: var(--surface-2);
 }
 
-/* ── Motion ───────────────────────────────────────────────────────────────────────────── */
+/* ── Motion ───────────────────────────────────────────────────────────────────────────────
+   Page sections rise in one after another; bars grow from their baseline. Nothing loops,
+   nothing bounces, and all of it is switched off for people who ask for reduced motion. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes grow-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+main > * {
+  animation: rise 0.55s var(--ease) backwards; /* backwards, not both: once done, no leftover layer that would cover dropdowns */
+}
+main > *:nth-child(2) { animation-delay: 0.04s; }
+main > *:nth-child(3) { animation-delay: 0.08s; }
+main > *:nth-child(4) { animation-delay: 0.12s; }
+main > *:nth-child(5) { animation-delay: 0.16s; }
+main > *:nth-child(6) { animation-delay: 0.2s; }
+main > *:nth-child(n + 7) { animation-delay: 0.24s; }
+.stagger > * {
+  animation: rise 0.55s var(--ease) backwards; /* backwards, not both: once done, no leftover layer that would cover dropdowns */
+}
+.stagger > *:nth-child(2) { animation-delay: 0.06s; }
+.stagger > *:nth-child(3) { animation-delay: 0.12s; }
+.stagger > *:nth-child(4) { animation-delay: 0.18s; }
+.grow-x {
+  transform-origin: left center;
+  animation: grow-x 0.9s var(--ease) 0.15s both;
+}
+.grow-y {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: grow-y 0.8s var(--ease) both;
+}
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+.draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: draw 1.2s var(--ease) 0.1s both;
+}
+.fade-in {
+  animation: fade 0.25s var(--ease) both;
+}
+.lift {
+  transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
+}
+.lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

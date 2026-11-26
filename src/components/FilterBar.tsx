@@ -80,27 +80,27 @@ export function FilterBar({
   );
 
   return (
-    <div className={`card p-3.5 mb-5 transition-opacity ${pending ? "opacity-60" : ""}`} aria-busy={pending}>
+    <div className={`card relative z-20 p-3 mb-6 transition-opacity duration-200 ${pending ? "opacity-60" : ""}`} aria-busy={pending}>
       <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 items-end">
         {primary.map(field)}
         <div className="flex gap-2 items-end">
-          {more.length > 0 && (
-            <button onClick={() => setOpen((x) => !x)} className="btn btn-ghost h-[47px] flex-1 border border-dashed !border-[var(--border-strong)]" aria-expanded={open}>
+          {(more.length > 0 || showSales) && (
+            <button onClick={() => setOpen((x) => !x)} className="btn btn-ghost h-[51px] flex-1 !rounded-[12px]" aria-expanded={open}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                 <path d="M3 6h18M7 12h10M10 18h4" />
               </svg>
-              {open ? "Fewer filters" : `More filters${moreActive ? ` (${moreActive})` : ""}`}
+              {open ? "Fewer filters" : `More filters${moreActive + (incl ? 1 : 0) ? ` (${moreActive + (incl ? 1 : 0)})` : ""}`}
             </button>
           )}
         </div>
       </div>
       {open && more.length > 0 && <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mt-2">{more.map(field)}</div>}
-      <div className="flex flex-wrap items-center gap-2 mt-3">
-        {showSales && (
+      <div className={`flex flex-wrap items-center gap-2 ${chips.length || pending || (showSales && (open || incl)) ? "mt-3 px-1" : ""}`}>
+        {showSales && (open || incl) && (
           <div className="seg" role="group" aria-label="Which invoices count as sales">
             {[
               ["", "Standard sales"],
-              ["incl", "+ ZTDN, ZNTI, ZDMS"],
+              ["incl", "Include debit notes & samples"],
             ].map(([v, l]) => (
               <button
                 key={v}

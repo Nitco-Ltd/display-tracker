@@ -69,7 +69,7 @@ export function BarChart({
           return (
             <g key={b.key} onMouseEnter={() => setHover(i)}>
               <rect x={pad.l + i * slot} y={pad.t} width={slot} height={H - pad.t - pad.b} fill="transparent" />
-              {h > 0 && <path d={d} fill={b.muted ? "var(--series-1-soft)" : "var(--series-1)"} opacity={hover === null || hover === i ? 1 : 0.55} />}
+              {h > 0 && <path className="grow-y" style={{ animationDelay: `${Math.min(i * 30, 400)}ms` }} d={d} fill={b.muted ? "var(--series-1-soft)" : "var(--series-1)"} opacity={hover === null || hover === i ? 1 : 0.45} />}
               {labelIdx.has(i) && v !== 0 && (
                 <text x={x + bw / 2} y={(v >= 0 ? yt : y(v)) - 6} textAnchor="middle" fontSize={11} fill="var(--text-secondary)">
                   {format(v)}
@@ -86,11 +86,11 @@ export function BarChart({
       </svg>
       {hover !== null && (
         <div
-          className="pointer-events-none absolute z-10 card shadow-md px-2.5 py-1.5 text-[12px] whitespace-nowrap"
-          style={{ left: Math.min(Math.max(0, pad.l + (hover + 0.5) * slot + 10), W - 220), top: 0 }}
+          className="fade-in pointer-events-none absolute z-10 card px-3 py-2 text-[12.5px] whitespace-nowrap"
+          style={{ boxShadow: "var(--shadow-lg)", borderRadius: 12, left: Math.min(Math.max(0, pad.l + (hover + 0.5) * slot + 10), W - 220), top: 0 }}
         >
           {bars[hover].tooltip.map((l, i) => (
-            <div key={i} className={i === 0 ? "font-semibold" : "text-ink-2"}>
+            <div key={i} className={i === 0 ? "font-semibold mb-0.5" : "text-ink-2"}>
               {l}
             </div>
           ))}

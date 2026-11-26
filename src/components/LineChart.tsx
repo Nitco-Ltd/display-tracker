@@ -67,7 +67,7 @@ export function LineChart({
           <line x1={pad.l} x2={W - pad.r} y1={y(vals[baselineIndex])} y2={y(vals[baselineIndex])} stroke="var(--text-muted)" strokeDasharray="4 4" />
         )}
         {hover !== null && <line x1={x(hover)} x2={x(hover)} y1={pad.t} y2={H - pad.b} stroke="var(--axis)" />}
-        <path d={path} fill="none" stroke="var(--series-1)" strokeWidth={2} strokeLinejoin="round" />
+        <path className="draw" pathLength={1} d={path} fill="none" stroke="var(--series-1)" strokeWidth={2.25} strokeLinejoin="round" strokeLinecap="round" />
         {points.map((p, i) =>
           Number.isFinite(vals[i]) ? (
             <circle
@@ -108,11 +108,11 @@ export function LineChart({
       </svg>
       {hover !== null && (
         <div
-          className="pointer-events-none absolute z-10 card shadow-md px-2.5 py-1.5 text-[12px] whitespace-nowrap"
-          style={{ left: Math.min(Math.max(0, x(hover) + 10), W - 210), top: 0 }}
+          className="fade-in pointer-events-none absolute z-10 card px-3 py-2 text-[12.5px] whitespace-nowrap"
+          style={{ boxShadow: "var(--shadow-lg)", borderRadius: 12, left: Math.min(Math.max(0, x(hover) + 10), W - 210), top: 0 }}
         >
           {points[hover].tooltip.map((l, i) => (
-            <div key={i} className={i === 0 ? "font-semibold" : "text-ink-2"}>
+            <div key={i} className={i === 0 ? "font-semibold mb-0.5" : "text-ink-2"}>
               {l}
             </div>
           ))}
