@@ -59,7 +59,7 @@ export function visibleMonths(cohort: string, upTo: string = currentMonth()): st
 
 /** "2026-08" -> "Display_Tracker_Report_-_Aug-2026.xlsx" */
 export function reportFileName(cohort: string, opts: SalesOptions = {}): string {
-  return `Display_Tracker_Report_-_${monthYear(cohort)}${opts.includeExtra ? "_incl_ZTDN_ZNTI_ZDMS" : ""}.xlsx`;
+  return `Display_Tracker_Report_-_${monthYear(cohort)}${opts.retailOnly ? "_Retail" : ""}${opts.includeExtra ? "_incl_ZTDN_ZNTI_ZDMS" : ""}.xlsx`;
 }
 
 export function buildWorkbook(cohort: string | null, rows: DisplayWithSales[], upTo: string = currentMonth()): ExcelJS.Workbook {
@@ -148,10 +148,10 @@ export async function buildReportBuffer(
   const summary = await salesFunnel(
     cohort,
     { zones: filter.zones, regions: filter.regions, dealerCodes: filter.dealerCodes, rmiNames: filter.rmiNames },
-    { includeExtra: opts.includeExtra },
+    opts,
   );
   const wb = buildWorkbook(cohort, rows, upTo);
-  addSummarySheet(wb, cohort, summary, filter, upTo, !!opts.includeExtra);
+  addSummarySheet(wb, cohort, summary, filter, upTo, opts);
   const buffer = Buffer.from(await wb.xlsx.writeBuffer());
   return { buffer, rows: rows.length };
 }
@@ -160,7 +160,7 @@ const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "Ju
 const longMonth = (ym: string) => `${MONTHS_LONG[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`;
 
 /** "Summary" sheet: where the month's sales went (plain tree), the new displays, and what the Report sheet's columns mean. */
-export function addSummarySheet(wb: ExcelJS.Workbook, cohort: string, f: FunnelResult, filter: ReportFilter, upTo: string, includeExtra: boolean) {
+export function addSummarySheet(wb: ExcelJS.Workbook, cohort: string, f: FunnelResult, filter: ReportFilter, upTo: string, opts: SalesOptions = {}) {
   const ws = wb.addWorksheet("Summary");
   ws.getColumn(1).width = 8;
   ws.getColumn(2).width = 62;
@@ -171,7 +171,8 @@ export function addSummarySheet(wb: ExcelJS.Workbook, cohort: string, f: FunnelR
   const extra = [filter.rmiNames?.length ? `RMI: ${filter.rmiNames.join(", ")}` : "", filter.dealerCodes?.length ? `Dealers: ${filter.dealerCodes.join(", ")}` : ""].filter(Boolean).join(" · ");
   const title = ws.addRow([`Display Tracker Report · ${longMonth(cohort)} · ${area}${extra ? ` · ${extra}` : ""}`]);
   title.font = { bold: true, size: 14 };
-  ws.addRow([includeExtra ? "Sales include ZTDN, ZNTI and ZDMS invoices." : "Sales: SAP tile invoices net of returns and credit notes (ZTDN, ZNTI, ZDMS not included), as in the Sales data MIS."]);
+  ws.addRow([opts.includeExtra ? "Sales include ZTDN, ZNTI and ZDMS invoices." : "Sales: SAP tile invoices net of returns and credit notes (ZTDN, ZNTI, ZDMS not included), as in the Sales data MIS."]);
+  ws.addRow([opts.retailOnly ? "Customers: Retail only (Key Accounts and Retail Project accounts left out, by SAP Customer Group 2)." : "Customers: Total (every customer)."]);
   ws.addRow([]);
   const head = (text: string) => {
     const r = ws.addRow([text]);

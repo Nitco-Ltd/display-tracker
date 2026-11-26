@@ -12,7 +12,8 @@
 import { desc, eq, lte } from "drizzle-orm";
 import { getDb, tables } from "@/db/client";
 import { cached } from "@/lib/datacache";
-import { allDisplaysWithSales, type DisplayWithSales } from "./window";
+import { allDisplaysWithSales, type DisplayWithSales, type SalesOptions } from "./window";
+import { customerFilter } from "./customers";
 
 /** Months that have SAP sales, newest first, up to `upTo` (the Monthly sales month picker). */
 export function salesMonths(upTo: string): Promise<string[]> {
@@ -107,17 +108,19 @@ const empty = (): FunnelSteps => ({
   displayDealerCount: 0,
 });
 
-export async function salesFunnel(month: string, f: FunnelFilter = {}, opts: { includeExtra?: boolean; displays?: DisplayWithSales[] } = {}): Promise<FunnelResult> {
+export async function salesFunnel(month: string, f: FunnelFilter = {}, opts: SalesOptions & { displays?: DisplayWithSales[] } = {}): Promise<FunnelResult> {
   const t = tables();
   const db = getDb();
   const extra = !!opts.includeExtra;
   const geo = await cached("customerGeo", customerGeo);
-  const displays = (opts.displays ?? (await allDisplaysWithSales())).filter(
+  const counted = await customerFilter(!!opts.retailOnly);
+  const displays = (opts.displays ?? (await allDisplaysWithSales({ retailOnly: opts.retailOnly }))).filter(
     (r) => r.cohortMonth && r.cohortMonth <= month && r.dealerCode,
   );
 
   // Which customers are in scope.
   const inArea = (c: string) => {
+    if (!counted(c)) return false;
     const g = geo.get(c);
     if (f.zones?.length && !f.zones.includes(g?.zone ?? "")) return false;
     if (f.regions?.length && !f.regions.includes(g?.region ?? "")) return false;

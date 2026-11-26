@@ -44,6 +44,7 @@ Admins see everything, zonal users see their zone, RMIs see their own displays.
 - **A display** = one dealer + one tile + one month. Repeats count once.
 - **"Led to a purchase"** = the dealer ordered that tile within 12 months after the display month.
 - **Sales** follow NITCO's Sales data MIS (SAP billing register), before GST.
+- **Total vs Retail only** (switch on every page): Total = every customer. Retail only leaves out Key Accounts and Retail Project accounts (SAP Customer Group 2 = 09 and 12).
 - **Same tile, new box:** codes that differ only in the box/serial number (e.g. Oyster Blue Onyx `…02160` → `…03021`) count as one tile.
 - **Same dealer, several accounts:** SAP accounts with the same GST number and PIN code count as one dealer.
 

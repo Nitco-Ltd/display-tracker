@@ -153,6 +153,7 @@ export const sapCustomer = sqliteTable("sap_customer", {
   postalCode: text("postal_code"),
   salesDistrict: text("sales_district"), // zone code, e.g. EZ1 (customer sales area, sales org 1801)
   salesOffice: text("sales_office"), // region office, e.g. BH1 / BH2 / BHC = Bihar
+  customerGroup: text("customer_group"), // SAP Customer Group 2: 09 Key Account, 12 Retail Project, 10 Retail, … (see sales/customers.ts)
   createdOn: text("created_on"),
   deleted: integer("deleted").notNull().default(0),
   lastSeenAt: text("last_seen_at").notNull(),

@@ -42,6 +42,16 @@ export function DownloadForm({ options, initialMonth }: { options: FilterOptions
           selected={v.extra?.length ? v.extra : ["0"]}
           onChange={(vals) => set("extra")(vals.includes("1") ? ["1"] : [])}
         />
+        <MultiSelect
+          single
+          label="Customers"
+          options={[
+            { value: "total", label: "Total" },
+            { value: "retail", label: "Retail only" },
+          ]}
+          selected={v.scope?.length ? v.scope : ["total"]}
+          onChange={(vals) => set("scope")(vals.includes("retail") ? ["retail"] : [])}
+        />
         <div className="flex items-end">
           <a href={`/api/report?${query.toString()}`} onClick={onDownload} className="btn btn-primary w-full h-[42px] !rounded-[8px]">
             <Icon name="download" size={16} />

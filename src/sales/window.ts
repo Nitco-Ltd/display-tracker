@@ -6,6 +6,7 @@ import { cached } from "@/lib/datacache";
 import type { ReportFilter } from "@/report/filters";
 import { linkedAccounts } from "./dealers";
 import { packagingFamilyKey } from "./packaging";
+import { customerFilter } from "./customers";
 
 export const WINDOW_BEFORE = 1;
 export const WINDOW_AFTER = 12;
@@ -78,11 +79,13 @@ export async function packagingFamilies(): Promise<{ familyOf: Map<string, strin
 export interface SalesOptions {
   /** Also count the undecided invoice types ZTDN, ZNTI, ZDMS (SAP_EXTRA_*). Default: no. */
   includeExtra?: boolean;
+  /** Count only retail customers: leave out Key Accounts and Retail Project accounts (see sales/customers.ts). */
+  retailOnly?: boolean;
 }
 
 /** Every display with its sales, loaded once per data version (see src/lib/datacache.ts). Don't mutate the rows. */
 export function allDisplaysWithSales(opts: SalesOptions = {}): Promise<DisplayWithSales[]> {
-  return cached(`displays|${opts.includeExtra ? "incl" : "std"}`, () => displaysWithSales(undefined, opts));
+  return cached(`displays|${opts.includeExtra ? "incl" : "std"}|${opts.retailOnly ? "retail" : "total"}`, () => displaysWithSales(undefined, opts));
 }
 
 /** In-memory version of filterWhere (src/report/filters.ts): same fields, same meaning. */
@@ -115,7 +118,8 @@ export async function displaysWithSales(where?: SQL, opts: SalesOptions = {}): P
 
   // Fetch sales only for the dealers involved (and their linked accounts).
   const links = await linkedAccounts();
-  const accountsOf = (d: string | null) => (d ? (links.get(d) ?? [d]) : []);
+  const counted = await customerFilter(!!opts.retailOnly);
+  const accountsOf = (d: string | null) => (d ? (links.get(d) ?? [d]) : []).filter(counted);
   const dealers = [...new Set(rows.flatMap((r) => accountsOf(r.dealerCode)))];
   const salesMap = new Map<string, { volume: number; value: number; extraVolume: number; extraValue: number }>();
   for (let i = 0; i < dealers.length; i += 500) {

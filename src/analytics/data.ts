@@ -7,7 +7,7 @@ import { ensureSchema } from "@/db/migrate";
 import { cached } from "@/lib/datacache";
 import { currentMonth } from "@/analytics/metrics";
 import type { ReportFilter } from "@/report/filters";
-import { allDisplaysWithSales, matchesFilter, type DisplayWithSales } from "@/sales/window";
+import { allDisplaysWithSales, matchesFilter, type DisplayWithSales, type SalesOptions } from "@/sales/window";
 
 import { paramList, type SearchParams } from "@/lib/params";
 
@@ -36,14 +36,16 @@ export function parseFilter(sp: SearchParams): ReportFilter {
   return f;
 }
 
-export const includeExtraFrom = (sp: SearchParams) => [sp.sales].flat().includes("incl");
+/** Sales options from the URL: ?sales=incl also counts ZTDN, ZNTI, ZDMS; ?scope=retail counts retail customers only. */
+export function salesOptionsFrom(sp: SearchParams): SalesOptions {
+  return { includeExtra: paramList(sp.sales).includes("incl"), retailOnly: paramList(sp.scope).includes("retail") };
+}
 
 export async function loadRows(sp: SearchParams): Promise<DisplayWithSales[]> {
   await ensureSchema();
   const viewer = await requireViewer();
   const filter = scopeFilter(viewer, parseFilter(sp));
-  // ?sales=incl -> also count ZTDN, ZNTI, ZDMS invoices (not decided yet whether they are sales).
-  const all = await allDisplaysWithSales({ includeExtra: includeExtraFrom(sp) });
+  const all = await allDisplaysWithSales(salesOptionsFrom(sp));
   return all.filter((r) => matchesFilter(r, filter));
 }
 

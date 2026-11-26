@@ -61,11 +61,19 @@ export async function syncSap(opts: { full?: boolean; forceMaterials?: boolean }
     const lastCust = await getState("sap_customers_synced_at");
     if (opts.forceMaterials || !lastCust || Date.now() - Date.parse(lastCust) > MATERIAL_MAX_AGE_DAYS * 86_400_000) {
       try {
-        // Zone (sales district) and region office per customer, for the Monthly sales view.
-        const area = new Map<string, { salesDistrict: string | null; salesOffice: string | null }>();
+        // Zone (sales district), region office and Customer Group 2 per customer. A customer has one sales area per
+        // distribution channel; tiles are invoiced on channel 12, so its group wins when channels disagree.
+        const area = new Map<string, { salesDistrict: string | null; salesOffice: string | null; customerGroup: string | null }>();
         try {
           for await (const page of sap.customerSalesAreas())
-            for (const a of page) if (!area.has(a.customer) || (!area.get(a.customer)!.salesOffice && a.salesOffice)) area.set(a.customer, a);
+            for (const a of page) {
+              const cur = area.get(a.customer);
+              area.set(a.customer, {
+                salesDistrict: cur?.salesOffice ? cur.salesDistrict : (a.salesDistrict ?? cur?.salesDistrict ?? null),
+                salesOffice: cur?.salesOffice ?? a.salesOffice,
+                customerGroup: a.channel === "12" && a.customerGroup ? a.customerGroup : (cur?.customerGroup ?? a.customerGroup),
+              });
+            }
         } catch (e) {
           log.warn(`[sap] customer sales areas not read (${(e as Error).message.slice(0, 200)}); zones/regions kept from the last run`);
         }
@@ -74,7 +82,7 @@ export async function syncSap(opts: { full?: boolean; forceMaterials?: boolean }
             t.sapCustomer,
             page.map((c) => ({ ...c, ...(area.get(c.customer) ?? {}), lastSeenAt: startedAt })),
             t.sapCustomer.customer,
-            area.size ? {} : { keep: ["salesDistrict", "salesOffice"] },
+            area.size ? {} : { keep: ["salesDistrict", "salesOffice", "customerGroup"] },
           );
           customers += page.length;
         }

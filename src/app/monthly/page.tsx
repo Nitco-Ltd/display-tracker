@@ -6,7 +6,7 @@ import { Hero } from "@/components/Hero";
 import { Icon } from "@/components/Icon";
 import { SplitBar } from "@/components/SplitBar";
 import { Tabs } from "@/components/Tabs";
-import { filterOptions, type SearchParams } from "@/analytics/data";
+import { filterOptions, salesOptionsFrom, type SearchParams } from "@/analytics/data";
 import { currentMonth } from "@/analytics/metrics";
 import { requireViewer } from "@/auth/viewer";
 import { ensureSchema } from "@/db/migrate";
@@ -68,13 +68,14 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
   const cur = currentMonth();
   const salesMonths = await loadSalesMonths(cur);
   const month = list(sp.month)[0] ?? salesMonths.find((m) => m < cur) ?? cur;
-  const includeExtra = list(sp.sales).includes("incl");
+  const salesOpts = salesOptionsFrom(sp);
+  const { includeExtra, retailOnly } = salesOpts;
 
   const f: FunnelFilter = { zones: list(sp.zone), regions: list(sp.region), dealerCodes: list(sp.dealer), rmiNames: list(sp.rmi) };
   if (viewer.role === "zonal") f.zones = [viewer.zone!];
   if (viewer.role === "rmi") f.rmiNames = [viewer.rmiName!];
 
-  const [r, options] = await Promise.all([salesFunnel(month, f, { includeExtra }), filterOptions()]);
+  const [r, options] = await Promise.all([salesFunnel(month, f, salesOpts), filterOptions()]);
   const where = [...(f.regions ?? []), ...(f.regions?.length ? [] : (f.zones ?? []))].join(", ") || "all regions";
   const who = f.rmiNames?.length ? ` · ${f.rmiNames.join(", ")}'s dealers` : f.dealerCodes?.length ? " · selected dealers" : "";
   const reportHref = `/download?month=${month}`;
@@ -171,13 +172,13 @@ export default async function Monthly({ searchParams }: { searchParams: Promise<
       </Suspense>
 
       <Hero
-        eyebrow={`Monthly sales · ${monthName(month)} · ${where}${who}`}
+        eyebrow={`Monthly sales · ${retailOnly ? "Retail only" : "Total"} · ${monthName(month)} · ${where}${who}`}
         badge={month === cur ? <span className="pill pill-warn">Month in progress</span> : undefined}
-        title={`${inrCompact(r.total)} of tiles sold in ${monthName(month)}${month === cur ? " so far" : ""}.`}
+        title={`${inrCompact(r.total)} of ${retailOnly ? "retail " : ""}tile sales in ${monthName(month)}${month === cur ? " so far" : ""}.`}
         share={r.total ? r.displayedDesigns / r.total : undefined}
         shareCaption="of it was a tile on display"
         stats={[
-          { label: "All sales", value: inrCompact(r.total), sub: includeExtra ? "incl. debit notes & samples" : "all tiles, all dealers" },
+          { label: retailOnly ? "Retail sales" : "All sales", value: inrCompact(r.total), sub: `${retailOnly ? "retail customers" : "all customers"}${includeExtra ? " · incl. debit notes & samples" : ""}` },
           { label: "Dealers with a display", value: inrCompact(r.displayDealers), sub: `${pct(pctA(r.displayDealers))} of sales · ${num(r.displayDealerCount)} dealers` },
           { label: "Tiles on display", value: inrCompact(r.displayedDesigns), sub: `${pct(pctA(r.displayedDesigns))} of sales` },
           { label: "New displays", value: num(r.monthDisplays), sub: `at ${num(r.monthDealerCount)} dealer${r.monthDealerCount === 1 ? "" : "s"}` },

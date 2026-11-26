@@ -1,0 +1,1 @@
+ALTER TABLE `sap_customer` ADD `customer_group` text;

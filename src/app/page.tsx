@@ -6,7 +6,7 @@ import { Hero } from "@/components/Hero";
 import { Funnel } from "@/components/Funnel";
 import { StackedBarChart } from "@/components/StackedBarChart";
 import { Icon } from "@/components/Icon";
-import { filterOptions, loadRows, type SearchParams } from "@/analytics/data";
+import { filterOptions, loadRows, salesOptionsFrom, type SearchParams } from "@/analytics/data";
 import { ALL_OFFSETS, beforeAfter, beforeVsAfter, currentMonth, kpis, offsetLabel, outcomes, outcomesByMonth, uniquePairs } from "@/analytics/metrics";
 import { paramList } from "@/lib/params";
 import { inr, inrCompact, m2, monthName, num, pct } from "@/lib/format";
@@ -37,7 +37,7 @@ export default async function Overview({ searchParams }: { searchParams: Promise
       </Suspense>
 
       <Hero
-        eyebrow={`Overview · ${where || "all zones"}`}
+        eyebrow={`Overview · ${salesOptionsFrom(sp).retailOnly ? "Retail only · " : ""}${where || "all zones"}`}
         title={Number.isFinite(o.rate) ? `${pct(o.rate).replace(".0%", "%")} of displays led to a purchase.` : "No displays to check for this selection yet."}
         share={o.checked ? o.rate : undefined}
         shareCaption="led to a purchase"

@@ -68,6 +68,7 @@ export function FilterBar({
   const moreActive = more.filter(([p]) => get(p).length).length;
   const [open, setOpen] = useState(moreActive > 0);
   const incl = get("sales").includes("incl");
+  const retail = get("scope").includes("retail");
 
   const chips = fields.flatMap(([p, label, opts]) =>
     get(p).map((v) => ({ p, v, text: `${labels[p] ?? label}: ${opts.find((x) => x.value === v)?.label ?? v}` })),
@@ -92,7 +93,19 @@ export function FilterBar({
         </div>
       </div>
       {open && more.length > 0 && <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mt-2">{more.map(field)}</div>}
-      <div className={`flex flex-wrap items-center gap-2 ${chips.length || pending || (showSales && (open || incl)) ? "mt-3 px-1" : ""}`}>
+      <div className={`flex flex-wrap items-center gap-2 ${showSales || chips.length || pending ? "mt-3 px-1" : ""}`}>
+        {showSales && (
+          <div className="seg" role="group" aria-label="Which customers count">
+            {[
+              ["", "Total", "Every customer, as in the Sales data MIS"],
+              ["retail", "Retail only", "Leaves out Key Accounts and Retail Project accounts (SAP Customer Group 2)"],
+            ].map(([v, l, tip]) => (
+              <button key={v} onClick={() => set("scope", v ? [v] : [])} aria-pressed={retail === !!v} title={tip}>
+                {l}
+              </button>
+            ))}
+          </div>
+        )}
         {showSales && (open || incl) && (
           <div className="seg" role="group" aria-label="Which invoices count as sales">
             {[

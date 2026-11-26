@@ -248,13 +248,22 @@ export class SapClient {
     }
   }
 
-  /** Each customer's sales district (zone, e.g. EZ1) and sales office (region, e.g. BH1) in the sales org(s). */
-  async *customerSalesAreas(): AsyncGenerator<{ customer: string; salesDistrict: string | null; salesOffice: string | null }[]> {
+  /** Each customer's sales district (zone, e.g. EZ1), sales office (region, e.g. BH1) and Customer Group 2
+   *  (09 Key Account, 12 Retail Project, 10 Retail, …) per distribution channel in the sales org(s). */
+  async *customerSalesAreas(): AsyncGenerator<
+    { customer: string; channel: string | null; salesDistrict: string | null; salesOffice: string | null; customerGroup: string | null }[]
+  > {
     const orgs = csv(config().SAP_SALES_ORGS);
-    const params: Record<string, string> = { $select: "Customer,SalesOrganization,SalesDistrict,SalesOffice" };
+    const params: Record<string, string> = { $select: "Customer,SalesOrganization,DistributionChannel,SalesDistrict,SalesOffice,AdditionalCustomerGroup2" };
     if (orgs.length) params.$filter = orgs.map((o) => `SalesOrganization eq '${o}'`).join(" or ");
     for await (const page of this.pages("API_BUSINESS_PARTNER/A_CustomerSalesArea", params, 5000)) {
-      yield page.map((r) => ({ customer: padCustomer(str(r.Customer))!, salesDistrict: str(r.SalesDistrict), salesOffice: str(r.SalesOffice) }));
+      yield page.map((r) => ({
+        customer: padCustomer(str(r.Customer))!,
+        channel: str(r.DistributionChannel),
+        salesDistrict: str(r.SalesDistrict),
+        salesOffice: str(r.SalesOffice),
+        customerGroup: str(r.AdditionalCustomerGroup2),
+      }));
     }
   }
 

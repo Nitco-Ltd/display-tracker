@@ -36,6 +36,8 @@ A line is a tile when its division is 02 or its material code starts with `TI`. 
 
 **Same tile, new box.** A tile code ends in two digits for tiles per box plus a serial (`TIGVMPL1200X600NOGL` `02` `160`: 2 tiles a box). When NITCO changes the box, the tile gets a new code (Oyster Blue Onyx `…02160` → `…03021`). Codes count as one tile when both are tile codes with the same design name and are identical up to the trailing number; "Not to use" codes never merge. The daily sync warns if two codes with the same box size both sell, so they can be checked with sales ops.
 
+**Total vs Retail only.** Every page and the report have a switch. *Total* counts every customer (as the Sales data MIS). *Retail only* leaves out customers whose SAP Customer Group 2 is **09 Key Account** or **12 Retail Project**; Retail, Le Studio Express, Multi Brand Outlet, Nitco Look, Galore, Others and One Time Customer stay in. The group comes from the customer master (refreshed weekly; `npm run sync:sap -- --materials` refreshes it now). Checked against the Sep-2026 register: Retail only ₹3.15 Cr in both.
+
 **Same dealer, several accounts.** SAP accounts with the same GST number and PIN code count as one dealer (NITCO's own depots never). The report's second sheet lists which accounts and codes were counted.
 
 **Dashboard rules.** A display = one dealer + tile + display month (repeats count once). Totals never count the same dealer × tile × month of sales twice. *Led to a purchase* = any purchase in the 12 months after the display month; displays from the current month, and displays whose tile isn't linked, are left out of rates.
