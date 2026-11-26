@@ -8,6 +8,7 @@
 //   import <file.csv>        columns: email,name,role,scope   (scope = zone or RMI name; blank for admin)
 //   reset  <email>           new random password (copied to the clipboard)
 //   set-password <email> [--show]   type a password you choose (hidden; --show displays it as you type)
+//   check  <email>           is this the password? (typed hidden; checked on this PC)
 //   disable <email> | enable <email>
 //
 // New passwords are printed once. Give each person their own; they are stored only as hashes.
@@ -17,7 +18,7 @@ import { execFileSync } from "node:child_process";
 import { eq } from "drizzle-orm";
 import { closeDb, getDb, tables } from "@/db/client";
 import { ensureSchema } from "@/db/migrate";
-import { generatePassword, hashPassword } from "@/auth/session";
+import { generatePassword, hashPassword, verifyPassword } from "@/auth/session";
 
 const ROLES = ["admin", "zonal", "rmi"] as const;
 
@@ -131,6 +132,14 @@ async function main() {
     const password = generatePassword();
     const r = await db.update(t.appUser).set({ passwordHash: hashPassword(password), updatedAt: new Date().toISOString() }).where(eq(t.appUser.email, a[0].toLowerCase())).returning({ e: t.appUser.email });
     console.log(r.length ? `${a[0]}\tnew ${showPassword(a[0], password)}` : `No user ${a[0]}`);
+    return;
+  }
+  if (cmd === "check") {
+    // Is this the password the account has? Typed at a hidden prompt; checked against the stored hash on this PC.
+    const [u] = await db.select().from(t.appUser).where(eq(t.appUser.email, a[0].toLowerCase()));
+    if (!u) return console.log(`No user ${a[0]}`);
+    const pw = (await askHidden(`Password to check for ${u.email} (hidden as you type): `)).trim();
+    console.log(verifyPassword(pw, u.passwordHash) ? `✓ Correct: ${u.email} can sign in with this password (${u.active ? "active" : "DISABLED"}, ${u.role})` : `✗ Not the password of ${u.email}`);
     return;
   }
   if (cmd === "set-password") {
