@@ -59,7 +59,7 @@ export function visibleMonths(cohort: string, upTo: string = currentMonth()): st
 
 /** "2026-08" -> "Display_Tracker_Report_-_Aug-2026.xlsx" */
 export function reportFileName(cohort: string, opts: SalesOptions = {}): string {
-  return `Display_Tracker_Report_-_${monthYear(cohort)}${opts.retailOnly ? "_Retail" : ""}${opts.includeExtra ? "_incl_ZTDN_ZNTI_ZDMS" : ""}.xlsx`;
+  return `Display_Tracker_Report_-_${monthYear(cohort)}${opts.retailOnly ? "_Retail" : ""}${opts.withoutProjectDealers ? "_without_project_dealers" : ""}${opts.includeExtra ? "_incl_ZTDN_ZNTI_ZDMS" : ""}.xlsx`;
 }
 
 export function buildWorkbook(cohort: string | null, rows: DisplayWithSales[], upTo: string = currentMonth()): ExcelJS.Workbook {
@@ -172,7 +172,9 @@ export function addSummarySheet(wb: ExcelJS.Workbook, cohort: string, f: FunnelR
   const title = ws.addRow([`Display Tracker Report · ${longMonth(cohort)} · ${area}${extra ? ` · ${extra}` : ""}`]);
   title.font = { bold: true, size: 14 };
   ws.addRow([opts.includeExtra ? "Sales include ZTDN, ZNTI and ZDMS invoices." : "Sales: SAP tile invoices net of returns and credit notes (ZTDN, ZNTI, ZDMS not included), as in the Sales data MIS."]);
-  ws.addRow([opts.retailOnly ? "Customers: Retail only (Key Accounts and Retail Project accounts left out, by SAP Customer Group 2)." : "Customers: Total (every customer)."]);
+  ws.addRow([
+    `Customers: ${opts.retailOnly ? "Retail (Key Accounts left out, by SAP Customer Group 2)" : "Total (every domestic customer)"}. Project dealers: ${opts.withoutProjectDealers ? "left out (storage locations F-KA, S-KA)" : "included"}.`,
+  ]);
   ws.addRow([]);
   const head = (text: string) => {
     const r = ws.addRow([text]);

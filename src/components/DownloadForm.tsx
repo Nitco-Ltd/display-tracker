@@ -47,10 +47,20 @@ export function DownloadForm({ options, initialMonth }: { options: FilterOptions
           label="Customers"
           options={[
             { value: "total", label: "Total" },
-            { value: "retail", label: "Retail only" },
+            { value: "retail", label: "Retail (without key accounts)" },
           ]}
           selected={v.scope?.length ? v.scope : ["total"]}
           onChange={(vals) => set("scope")(vals.includes("retail") ? ["retail"] : [])}
+        />
+        <MultiSelect
+          single
+          label="Project dealers"
+          options={[
+            { value: "with", label: "With project dealers" },
+            { value: "without", label: "Without project dealers" },
+          ]}
+          selected={v.pd?.length ? v.pd : ["with"]}
+          onChange={(vals) => set("pd")(vals.includes("without") ? ["without"] : [])}
         />
         <div className="flex items-end">
           <a href={`/api/report?${query.toString()}`} onClick={onDownload} className="btn btn-primary w-full h-[42px] !rounded-[8px]">

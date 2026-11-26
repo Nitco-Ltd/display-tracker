@@ -79,13 +79,33 @@ export async function packagingFamilies(): Promise<{ familyOf: Map<string, strin
 export interface SalesOptions {
   /** Also count the undecided invoice types ZTDN, ZNTI, ZDMS (SAP_EXTRA_*). Default: no. */
   includeExtra?: boolean;
-  /** Count only retail customers: leave out Key Accounts and Retail Project accounts (see sales/customers.ts). */
+  /** Count only retail customers: leave out Key Accounts (see sales/customers.ts). */
   retailOnly?: boolean;
+  /** Leave out invoice lines from project-dealer storage locations (F-KA / S-KA). */
+  withoutProjectDealers?: boolean;
+}
+
+/** Cache key for a set of sales options. */
+export const salesOptionsKey = (o: SalesOptions) => `${o.includeExtra ? "incl" : "std"}|${o.retailOnly ? "retail" : "total"}|${o.withoutProjectDealers ? "nopd" : "pd"}`;
+
+/** A monthly row's value and volume under the chosen options (extras added, project-dealer part taken out). */
+export function countedAmounts(
+  s: { volume: number; value: number; extraVolume: number; extraValue: number; projectVolume: number; projectValue: number; projectExtraVolume: number; projectExtraValue: number },
+  o: SalesOptions,
+): { volume: number; value: number; extraValue: number } {
+  const noPd = !!o.withoutProjectDealers;
+  const extraVolume = s.extraVolume - (noPd ? s.projectExtraVolume : 0);
+  const extraValue = s.extraValue - (noPd ? s.projectExtraValue : 0);
+  return {
+    volume: s.volume - (noPd ? s.projectVolume : 0) + (o.includeExtra ? extraVolume : 0),
+    value: s.value - (noPd ? s.projectValue : 0) + (o.includeExtra ? extraValue : 0),
+    extraValue,
+  };
 }
 
 /** Every display with its sales, loaded once per data version (see src/lib/datacache.ts). Don't mutate the rows. */
 export function allDisplaysWithSales(opts: SalesOptions = {}): Promise<DisplayWithSales[]> {
-  return cached(`displays|${opts.includeExtra ? "incl" : "std"}|${opts.retailOnly ? "retail" : "total"}`, () => displaysWithSales(undefined, opts));
+  return cached(`displays|${salesOptionsKey(opts)}`, () => displaysWithSales(undefined, opts));
 }
 
 /** In-memory version of filterWhere (src/report/filters.ts): same fields, same meaning. */
@@ -121,11 +141,11 @@ export async function displaysWithSales(where?: SQL, opts: SalesOptions = {}): P
   const counted = await customerFilter(!!opts.retailOnly);
   const accountsOf = (d: string | null) => (d ? (links.get(d) ?? [d]) : []).filter(counted);
   const dealers = [...new Set(rows.flatMap((r) => accountsOf(r.dealerCode)))];
-  const salesMap = new Map<string, { volume: number; value: number; extraVolume: number; extraValue: number }>();
+  const salesMap = new Map<string, { volume: number; value: number; extraValue: number }>();
   for (let i = 0; i < dealers.length; i += 500) {
     const chunk = dealers.slice(i, i + 500);
     for (const s of await db.select().from(t.sapSalesMonthly).where(inArray(t.sapSalesMonthly.dealerCode, chunk))) {
-      salesMap.set(`${s.dealerCode}|${s.materialCode}|${s.month}`, { volume: s.volume, value: s.value, extraVolume: s.extraVolume, extraValue: s.extraValue });
+      salesMap.set(`${s.dealerCode}|${s.materialCode}|${s.month}`, countedAmounts(s, opts));
     }
   }
 
@@ -146,8 +166,8 @@ export async function displaysWithSales(where?: SQL, opts: SalesOptions = {}): P
         for (const c of salesCodes) {
           const s = salesMap.get(`${a}|${c}|${m}`);
           if (!s) continue;
-          const v = s.volume + (includeExtra ? s.extraVolume : 0);
-          const val = s.value + (includeExtra ? s.extraValue : 0);
+          const v = s.volume;
+          const val = s.value;
           volume += v;
           value += val;
           extraValue += s.extraValue;

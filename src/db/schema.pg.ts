@@ -119,6 +119,7 @@ export const sapBillingItem = pgTable(
     baseUnit: text("base_unit"),
     netAmount: doublePrecision("net_amount"),
     taxAmount: doublePrecision("tax_amount"),
+    storageLocation: text("storage_location"), // F-KA / S-KA = project-dealer sales
     currency: text("currency"),
     isCancelled: integer("is_cancelled").notNull().default(0),
     lastChange: text("last_change"),
@@ -168,6 +169,11 @@ export const sapSalesMonthly = pgTable(
     volumeIncomplete: integer("volume_incomplete").notNull().default(0),
     extraVolume: doublePrecision("extra_volume").notNull().default(0), // ZNTI/ZDMS/ZTDN (SAP_EXTRA_*): counted only in the "incl." version
     extraValue: doublePrecision("extra_value").notNull().default(0),
+    // Part of the above that came from project-dealer storage locations (F-KA / S-KA): subtracted for "without project dealers".
+    projectVolume: doublePrecision("project_volume").notNull().default(0),
+    projectValue: doublePrecision("project_value").notNull().default(0),
+    projectExtraVolume: doublePrecision("project_extra_volume").notNull().default(0),
+    projectExtraValue: doublePrecision("project_extra_value").notNull().default(0),
     updatedAt: text("updated_at").notNull(),
   },
   (t) => [primaryKey({ columns: [t.dealerCode, t.materialCode, t.month] })],
@@ -197,6 +203,11 @@ export const sapCustomerMonthly = pgTable(
     value: doublePrecision("value").notNull(),
     extraVolume: doublePrecision("extra_volume").notNull().default(0),
     extraValue: doublePrecision("extra_value").notNull().default(0),
+    // Part of the above that came from project-dealer storage locations (F-KA / S-KA): subtracted for "without project dealers".
+    projectVolume: doublePrecision("project_volume").notNull().default(0),
+    projectValue: doublePrecision("project_value").notNull().default(0),
+    projectExtraVolume: doublePrecision("project_extra_volume").notNull().default(0),
+    projectExtraValue: doublePrecision("project_extra_value").notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.customer, t.month] })],
 );

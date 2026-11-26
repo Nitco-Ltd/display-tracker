@@ -43,6 +43,13 @@
       "when": 1795676308467,
       "tag": "0005_reflective_maddog",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795677490290,
+      "tag": "0006_gifted_red_ghost",
+      "breakpoints": true
     }
   ]
 }

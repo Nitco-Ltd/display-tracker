@@ -122,6 +122,7 @@ export const sapBillingItem = sqliteTable(
     baseUnit: text("base_unit"),
     netAmount: real("net_amount"),
     taxAmount: real("tax_amount"),
+    storageLocation: text("storage_location"), // F-KA / S-KA = project-dealer sales
     currency: text("currency"),
     isCancelled: integer("is_cancelled").notNull().default(0),
     lastChange: text("last_change"),
@@ -171,6 +172,11 @@ export const sapSalesMonthly = sqliteTable(
     volumeIncomplete: integer("volume_incomplete").notNull().default(0), // 1 if some lines lacked a unit conversion
     extraVolume: real("extra_volume").notNull().default(0), // ZNTI/ZDMS/ZTDN (SAP_EXTRA_*): counted only in the "incl." version
     extraValue: real("extra_value").notNull().default(0),
+    // Part of the above that came from project-dealer storage locations (F-KA / S-KA): subtracted for "without project dealers".
+    projectVolume: real("project_volume").notNull().default(0),
+    projectValue: real("project_value").notNull().default(0),
+    projectExtraVolume: real("project_extra_volume").notNull().default(0),
+    projectExtraValue: real("project_extra_value").notNull().default(0),
     updatedAt: text("updated_at").notNull(),
   },
   (t) => [primaryKey({ columns: [t.dealerCode, t.materialCode, t.month] })],
@@ -200,6 +206,11 @@ export const sapCustomerMonthly = sqliteTable(
     value: real("value").notNull(),
     extraVolume: real("extra_volume").notNull().default(0),
     extraValue: real("extra_value").notNull().default(0),
+    // Part of the above that came from project-dealer storage locations (F-KA / S-KA): subtracted for "without project dealers".
+    projectVolume: real("project_volume").notNull().default(0),
+    projectValue: real("project_value").notNull().default(0),
+    projectExtraVolume: real("project_extra_volume").notNull().default(0),
+    projectExtraValue: real("project_extra_value").notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.customer, t.month] })],
 );

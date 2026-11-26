@@ -12,7 +12,7 @@
 import { desc, eq, lte } from "drizzle-orm";
 import { getDb, tables } from "@/db/client";
 import { cached } from "@/lib/datacache";
-import { allDisplaysWithSales, type DisplayWithSales, type SalesOptions } from "./window";
+import { allDisplaysWithSales, countedAmounts, type DisplayWithSales, type SalesOptions } from "./window";
 import { customerFilter } from "./customers";
 
 /** Months that have SAP sales, newest first, up to `upTo` (the Monthly sales month picker). */
@@ -111,10 +111,9 @@ const empty = (): FunnelSteps => ({
 export async function salesFunnel(month: string, f: FunnelFilter = {}, opts: SalesOptions & { displays?: DisplayWithSales[] } = {}): Promise<FunnelResult> {
   const t = tables();
   const db = getDb();
-  const extra = !!opts.includeExtra;
   const geo = await cached("customerGeo", customerGeo);
   const counted = await customerFilter(!!opts.retailOnly);
-  const displays = (opts.displays ?? (await allDisplaysWithSales({ retailOnly: opts.retailOnly }))).filter(
+  const displays = (opts.displays ?? (await allDisplaysWithSales({ retailOnly: opts.retailOnly, withoutProjectDealers: opts.withoutProjectDealers }))).filter(
     (r) => r.cohortMonth && r.cohortMonth <= month && r.dealerCode,
   );
 
@@ -187,7 +186,7 @@ export async function salesFunnel(month: string, f: FunnelFilter = {}, opts: Sal
   const custMonth = await cached(`customerMonthly|${month}`, () => db.select().from(t.sapCustomerMonthly).where(eq(t.sapCustomerMonthly.month, month)));
   for (const s of custMonth) {
     if (!inScope(s.customer)) continue;
-    const v = s.value + (extra ? s.extraValue : 0);
+    const v = countedAmounts(s, opts).value;
     add("total", s.customer, v);
     add("customers", s.customer, 1);
     if (displayAccts.has(s.customer)) {
@@ -204,7 +203,7 @@ export async function salesFunnel(month: string, f: FunnelFilter = {}, opts: Sal
   for (const s of salesMonth) {
     if (!inScope(s.dealerCode)) continue;
     const k = `${s.dealerCode}|${s.materialCode}`;
-    const v = s.value + (extra ? s.extraValue : 0);
+    const v = countedAmounts(s, opts).value;
     if (pairs.has(k)) add("displayedDesigns", s.dealerCode, v);
     if (monthPairs.has(k)) add("monthDesigns", s.dealerCode, v);
     if (displayAccts.has(s.dealerCode) && v) addTile(pairs.has(k) ? "on" : "off", s.materialCode, groupOfAcct(s.dealerCode), v);

@@ -138,13 +138,36 @@ export async function rebuildMonthlySales(): Promise<{ rows: number; noVolume: n
   const extra = new Set(csv(config().SAP_EXTRA_DOC_TYPES));
   const extraValueOnly = new Set(csv(config().SAP_EXTRA_VALUE_ONLY_DOC_TYPES));
   const volUnit = config().SAP_VOLUME_UNIT.toUpperCase();
+  const projectLocations = new Set(csv(config().SAP_PROJECT_STORAGE_LOCATIONS));
   const conv = new Map((await db.select().from(t.sapMaterial)).map((m) => [m.material, m.volumePerBaseUnit]));
 
-  type Acc = { dealerCode: string; materialCode: string; month: string; volume: number; value: number; extraVolume: number; extraValue: number; lineCount: number; volumeIncomplete: number };
+  // Each total also keeps the part from project-dealer storage locations, so pages can leave it out.
+  type Amounts = { volume: number; value: number; extraVolume: number; extraValue: number; projectVolume: number; projectValue: number; projectExtraVolume: number; projectExtraValue: number };
+  const zero = (): Amounts => ({ volume: 0, value: 0, extraVolume: 0, extraValue: 0, projectVolume: 0, projectValue: 0, projectExtraVolume: 0, projectExtraValue: 0 });
+  const addLine = (a: Amounts, isExtra: boolean, isProject: boolean, vol: number, val: number) => {
+    if (isExtra) {
+      a.extraVolume += vol;
+      a.extraValue += val;
+      if (isProject) {
+        a.projectExtraVolume += vol;
+        a.projectExtraValue += val;
+      }
+    } else {
+      a.volume += vol;
+      a.value += val;
+      if (isProject) {
+        a.projectVolume += vol;
+        a.projectValue += val;
+      }
+    }
+  };
+  const AMOUNT_KEYS = Object.keys(zero()) as (keyof Amounts)[];
+  const rounded = (a: Amounts): Amounts => Object.fromEntries(AMOUNT_KEYS.map((k) => [k, +a[k].toFixed(3)])) as Amounts;
+  type Acc = Amounts & { dealerCode: string; materialCode: string; month: string; lineCount: number; volumeIncomplete: number };
   const acc = new Map<string, Acc>();
   // All tile sales per customer × month (division 02, like NITCO's Sales data MIS) for the Monthly sales view.
   const tileDivisions = new Set(csv(config().SAP_TILE_DIVISIONS));
-  type CAcc = { customer: string; month: string; volume: number; value: number; extraVolume: number; extraValue: number };
+  type CAcc = Amounts & { customer: string; month: string };
   const cust = new Map<string, CAcc>();
   let noVolume = 0;
   for (const l of await db.select().from(t.sapBillingItem)) {
@@ -158,14 +181,13 @@ export async function rebuildMonthlySales(): Promise<{ rows: number; noVolume: n
     else if (l.quantityUnit?.toUpperCase() === volUnit) vol = l.quantity;
     else if (l.quantityBase !== null && conv.get(l.material)) vol = l.quantityBase * conv.get(l.material)!;
     if (vol === null) noVolume++;
+    const isProject = projectLocations.has(l.storageLocation ?? "");
+    const v = sign * (vol ?? 0);
+    const val = sign * (l.netAmount ?? 0);
     const key = `${l.soldTo}|${l.material}|${l.billingDate.slice(0, 7)}`;
-    const a = acc.get(key) ?? { dealerCode: l.soldTo, materialCode: l.material, month: l.billingDate.slice(0, 7), volume: 0, value: 0, extraVolume: 0, extraValue: 0, lineCount: 0, volumeIncomplete: 0 };
-    if (isExtra) {
-      a.extraVolume += sign * (vol ?? 0);
-      a.extraValue += sign * (l.netAmount ?? 0);
-    } else {
-      a.volume += sign * (vol ?? 0);
-      a.value += sign * (l.netAmount ?? 0);
+    const a = acc.get(key) ?? { dealerCode: l.soldTo, materialCode: l.material, month: l.billingDate.slice(0, 7), ...zero(), lineCount: 0, volumeIncomplete: 0 };
+    addLine(a, isExtra, isProject, v, val);
+    if (!isExtra) {
       a.lineCount++;
       if (vol === null) a.volumeIncomplete = 1;
     }
@@ -173,33 +195,14 @@ export async function rebuildMonthlySales(): Promise<{ rows: number; noVolume: n
     // Tile = tile division (02), or a tile material code (TI…) billed under another division, as NITCO's register extracts classify it.
     if (!tileDivisions.size || tileDivisions.has(l.division ?? "") || l.material.startsWith("TI")) {
       const ck = `${l.soldTo}|${a.month}`;
-      const c = cust.get(ck) ?? { customer: l.soldTo, month: a.month, volume: 0, value: 0, extraVolume: 0, extraValue: 0 };
-      if (isExtra) {
-        c.extraVolume += sign * (vol ?? 0);
-        c.extraValue += sign * (l.netAmount ?? 0);
-      } else {
-        c.volume += sign * (vol ?? 0);
-        c.value += sign * (l.netAmount ?? 0);
-      }
+      const c = cust.get(ck) ?? { customer: l.soldTo, month: a.month, ...zero() };
+      addLine(c, isExtra, isProject, v, val);
       cust.set(ck, c);
     }
   }
-  const custRows = [...cust.values()].map((c) => ({
-    ...c,
-    volume: +c.volume.toFixed(3),
-    value: +c.value.toFixed(3),
-    extraVolume: +c.extraVolume.toFixed(3),
-    extraValue: +c.extraValue.toFixed(3),
-  }));
+  const custRows = [...cust.values()].map((c) => ({ ...c, ...rounded(c) }));
   const now = nowIso();
-  const rows = [...acc.values()].map((a) => ({
-    ...a,
-    volume: +a.volume.toFixed(3),
-    value: +a.value.toFixed(3),
-    extraVolume: +a.extraVolume.toFixed(3),
-    extraValue: +a.extraValue.toFixed(3),
-    updatedAt: now,
-  }));
+  const rows = [...acc.values()].map((a) => ({ ...a, ...rounded(a), updatedAt: now }));
   await db.transaction(async (tx) => {
     await tx.delete(t.sapSalesMonthly);
     for (let i = 0; i < rows.length; i += 500) await tx.insert(t.sapSalesMonthly).values(rows.slice(i, i + 500));

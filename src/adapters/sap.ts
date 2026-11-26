@@ -32,6 +32,7 @@ export interface SapBillingLine {
   baseUnit: string | null;
   netAmount: number | null;
   taxAmount: number | null;
+  storageLocation: string | null; // F-KA / S-KA = project-dealer sales (SAP_PROJECT_STORAGE_LOCATIONS)
   currency: string | null;
   isCancelled: boolean;
   lastChange: string | null; // ISO timestamp
@@ -161,7 +162,7 @@ export class SapClient {
         "SalesOrganization", "DistributionChannel", "Division", "BillingDocumentIsCancelled", "TransactionCurrency",
         "LastChangeDateTime",
         "to_Item/BillingDocumentItem", "to_Item/Material", "to_Item/BillingQuantity", "to_Item/BillingQuantityUnit",
-        "to_Item/BillingQuantityInBaseUnit", "to_Item/BaseUnit", "to_Item/NetAmount", "to_Item/TaxAmount",
+        "to_Item/BillingQuantityInBaseUnit", "to_Item/BaseUnit", "to_Item/NetAmount", "to_Item/TaxAmount", "to_Item/StorageLocation",
       ].join(","),
     };
     for await (const page of this.pages("API_BILLING_DOCUMENT_SRV/A_BillingDocument", params, 1000)) {
@@ -188,6 +189,7 @@ export class SapClient {
             baseUnit: str(it.BaseUnit),
             netAmount: num(it.NetAmount),
             taxAmount: num(it.TaxAmount),
+            storageLocation: str(it.StorageLocation),
             currency: str(h.TransactionCurrency),
             isCancelled: h.BillingDocumentIsCancelled === true || h.BillingDocumentIsCancelled === "X",
             lastChange: odataDate(h.LastChangeDateTime)?.toISOString() ?? null,

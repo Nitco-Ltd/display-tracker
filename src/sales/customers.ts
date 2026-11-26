@@ -1,7 +1,9 @@
 // Customer type, from SAP's Customer Group 2 (A_CustomerSalesArea.AdditionalCustomerGroup2, the "Customer Grp 2"
-// column of NITCO's sales register). Agreed with the business owner on 2026-11-26:
-//   Total       = every customer (as in the Sales data MIS)
-//   Retail only = everyone except Key Accounts (09) and Retail Project accounts (12)
+// column of NITCO's sales register). Agreed with the business owner on 2026-11-26, and checked against NITCO's
+// monthly Retail / Key / Export summary (Apr–Oct 2026):
+//   Total  = every domestic customer (as in the Sales data MIS)
+//   Retail = everyone except Key Accounts (09)
+// Project dealers are a separate switch, by invoice storage location (F-KA / S-KA), not by customer group.
 import { getDb, tables } from "@/db/client";
 import { cached } from "@/lib/datacache";
 
@@ -17,8 +19,8 @@ export const CUSTOMER_GROUP_NAMES: Record<string, string> = {
   "12": "Retail Project",
 };
 
-/** Groups left out of "Retail only". */
-export const NON_RETAIL_GROUPS = new Set(["09", "12"]);
+/** Groups left out of "Retail". */
+export const NON_RETAIL_GROUPS = new Set(["09"]);
 
 export function isRetailGroup(group: string | null | undefined): boolean {
   return !NON_RETAIL_GROUPS.has(group ?? "");

@@ -36,9 +36,19 @@ export function parseFilter(sp: SearchParams): ReportFilter {
   return f;
 }
 
-/** Sales options from the URL: ?sales=incl also counts ZTDN, ZNTI, ZDMS; ?scope=retail counts retail customers only. */
+/** Sales options from the URL: ?sales=incl also counts ZTDN, ZNTI, ZDMS; ?scope=retail leaves out Key Accounts;
+ *  ?pd=without leaves out project-dealer sales (storage locations F-KA / S-KA). */
 export function salesOptionsFrom(sp: SearchParams): SalesOptions {
-  return { includeExtra: paramList(sp.sales).includes("incl"), retailOnly: paramList(sp.scope).includes("retail") };
+  return {
+    includeExtra: paramList(sp.sales).includes("incl"),
+    retailOnly: paramList(sp.scope).includes("retail"),
+    withoutProjectDealers: paramList(sp.pd).includes("without"),
+  };
+}
+
+/** "Retail · without project dealers" style label for page headers ("" for the default view). */
+export function salesOptionsLabel(o: SalesOptions): string {
+  return [o.retailOnly ? "Retail" : "", o.withoutProjectDealers ? "Without project dealers" : ""].filter(Boolean).join(" · ");
 }
 
 export async function loadRows(sp: SearchParams): Promise<DisplayWithSales[]> {

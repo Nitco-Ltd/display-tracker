@@ -69,6 +69,7 @@ export function FilterBar({
   const [open, setOpen] = useState(moreActive > 0);
   const incl = get("sales").includes("incl");
   const retail = get("scope").includes("retail");
+  const noPd = get("pd").includes("without");
 
   const chips = fields.flatMap(([p, label, opts]) =>
     get(p).map((v) => ({ p, v, text: `${labels[p] ?? label}: ${opts.find((x) => x.value === v)?.label ?? v}` })),
@@ -97,10 +98,22 @@ export function FilterBar({
         {showSales && (
           <div className="seg" role="group" aria-label="Which customers count">
             {[
-              ["", "Total", "Every customer, as in the Sales data MIS"],
-              ["retail", "Retail only", "Leaves out Key Accounts and Retail Project accounts (SAP Customer Group 2)"],
+              ["", "Total", "Every domestic customer, as in the Sales data MIS"],
+              ["retail", "Retail", "Leaves out Key Accounts (SAP Customer Group 2 = Key Account)"],
             ].map(([v, l, tip]) => (
               <button key={v} onClick={() => set("scope", v ? [v] : [])} aria-pressed={retail === !!v} title={tip}>
+                {l}
+              </button>
+            ))}
+          </div>
+        )}
+        {showSales && (
+          <div className="seg" role="group" aria-label="Project dealers">
+            {[
+              ["", "With project dealers", "Includes sales from project-dealer storage locations (F-KA, S-KA)"],
+              ["without", "Without project dealers", "Leaves out sales from project-dealer storage locations (F-KA, S-KA)"],
+            ].map(([v, l, tip]) => (
+              <button key={v} onClick={() => set("pd", v ? [v] : [])} aria-pressed={noPd === !!v} title={tip}>
                 {l}
               </button>
             ))}
