@@ -10,9 +10,9 @@
    ─────────────────────────────────────────────────────────────────────────────────────────── */
 :root {
   color-scheme: light;
-  --surface-0: #f4f2ed; /* page */
-  --surface-1: #fdfcf9; /* cards */
-  --surface-2: #f6f4ef; /* wells, hover */
+  --surface-0: #f5f3ef; /* page (sampled from NITCO Insights) */
+  --surface-1: #fffefa; /* cards (sampled from NITCO Insights) */
+  --surface-2: #f8f6f2; /* wells, hover */
   --surface-3: #ebe8e1; /* tracks, inactive controls */
   --border: #e6e2d9;
   --border-strong: #d6d1c5;

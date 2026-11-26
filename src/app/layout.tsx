@@ -47,7 +47,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en-IN" className={`${inter.variable} ${serif.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
-        <header className="sticky top-0 z-30 text-[#e9e6df]" style={{ background: "#161513", borderBottom: "1px solid #2a2925" }}>
+        <header className="sticky top-0 z-30 text-[#e9e6df]" style={{ background: "#1f1f1f", borderBottom: "1px solid #2c2c2c" }}>
           <div className="mx-auto max-w-[1180px] px-4 md:px-8 h-auto min-h-[52px] py-2 flex flex-wrap items-center gap-x-8 gap-y-1">
             <BrandMark />
             {viewer && (
